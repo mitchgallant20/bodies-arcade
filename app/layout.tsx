@@ -11,6 +11,7 @@ export const metadata: Metadata = {
   appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "Arcade" },
   icons: { icon: withBase("/icons/icon.svg"), apple: withBase("/icons/apple-touch-icon.png") },
   formatDetection: { telephone: false },
+  robots: { index: false, follow: false }, // family app: keep it out of search engines
   other: { "mobile-web-app-capable": "yes" },
 };
 

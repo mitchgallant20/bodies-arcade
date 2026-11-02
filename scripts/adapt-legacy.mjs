@@ -20,6 +20,7 @@ const head = (themeColor) => `<!doctype html>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="${themeColor}">
+<meta name="robots" content="noindex, nofollow">
 <link rel="manifest" href="../manifest.webmanifest">
 <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
 <link rel="icon" href="../icons/icon.svg" type="image/svg+xml">
