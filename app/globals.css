@@ -124,6 +124,7 @@ button, a.btn { font-family: inherit; touch-action: manipulation; }
   background: var(--bezel); border-radius: 8px; aspect-ratio: 16 / 9; max-width: 100%;
   display: flex; align-items: center; justify-content: center; text-align: center; padding: 12px;
   font-family: var(--display); font-size: 12px; line-height: 1.6; color: var(--turtle);
+  white-space: pre-line; /* marquee text may carry a line break ("TITLE\nCOMING SOON") */
 }
 .cabinet .screen.soon { color: var(--muted); }
 .cabinet .blurb { margin: 0; color: var(--muted); font-size: 16px; }
