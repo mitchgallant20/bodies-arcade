@@ -1,0 +1,500 @@
+# Bodie's Arcade: Build Handoff
+
+Version 1, November 2026. Written for the coding agent working in this repo (Claude Code or Codex) and for Mitch as the product owner.
+
+## 0. How to use this document
+
+1. Put this file at `docs/HANDOFF.md` and the two files in `legacy/` next to it. Reference both from `CLAUDE.md` (or `AGENTS.md`) so every session reads them.
+2. Work the phases in Section 18 in order. Each phase has a "done when" list. Do not start the next phase until the current one passes on a real iPhone.
+3. The legacy HTML files are the source of truth for game feel, book content, word lists and the parent Guide. Port them; do not redesign them from scratch.
+4. When something here is unclear or conflicts with the code, ask Mitch. Section 20 lists the open decisions with the default to use if no answer comes.
+5. Keep this document current. When a decision changes, edit it here in the same PR.
+
+## 1. The brief
+
+One app, installed on an iPhone or iPad, with two wings and a parent room:
+
+- **Arcade.** Retro mini games (first: Purple Turtles, a remake of the 1983 Commodore 64 game) that can run in reading mode, where sight words gate the action.
+- **Reading Room.** The existing "Bodie's Books" app: picture books about Bodie's own life, sight-word highlighting, tap-to-hear, Flash Cards, Sight Word Shootout.
+- **Dad's Corner.** PIN-gated. Progress, settings, the parent Guide, and an approval queue for anything AI writes.
+
+Underneath both wings is one shared **word engine** that tracks every sight word, schedules when it comes back, and decides when a level unlocks. AI proposes stories, next words and a weekly summary; Dad approves.
+
+### Who it is for
+
+- Bodie, grade 3, behind on reading and especially sight words. Reads word by word; frustration is the main enemy. Loves hockey (plays for Phoenix Flames Red, U9), the Jets, Sea Bears, Riders, Blue Jays, Raptors, Team Canada, Messi, fishing, canoeing, the outdoors, Metallica.
+- Mitch, who runs the sessions, approves content and reads the dashboard.
+- Devices: iPhone (primary, landscape for games), iPad, occasionally a laptop.
+
+## 2. Non-negotiables
+
+These come from the parent Guide in Bodie's Books and from the way the games were designed. They override any shortcut.
+
+1. **Errors in reading tasks never cost a life, a point or a star.** A wrong word pick shakes, greys out, the word is spoken again, and he tries again. Only game-mechanic mistakes (missing a turtle) cost lives.
+2. **End on a win.** Sessions end on a success screen, never on a failure. The app ends a session; the kid never "fails out" of one.
+3. **Sessions are capped.** 10 to 12 minutes for a full session, about 3 for a quick run. No "one more level" pressure after the cap.
+4. **Dad approves everything AI writes before Bodie sees it.** No exceptions, including word choices that change a gate.
+5. **Free play is never the price of reading.** The arcade is always playable. A completed session earns cosmetics (a new cabinet skin, confetti, a badge), not access.
+6. **No ads, no third-party analytics, no accounts for Bodie.** One family, one kid record, one Dad PIN. Keep the data model simple enough to delete in one query.
+7. **Offline first.** Everything but AI calls must work with no signal (at the rink, in the truck).
+8. **Bodie-facing copy reads at a grade 1 to 2 level.** Short words, short sentences, big type. Dad-facing copy is plain. No em dashes anywhere in app copy or docs.
+9. **Landscape is a first-class layout for games.** Portrait is first-class for reading. Both must work on an iPhone with the notch on either side.
+
+## 3. What already exists
+
+Two finished single-file web apps live in `legacy/`. Treat them as specifications with running code attached.
+
+### `legacy/purple-turtles.html` (Bodie's Purple Turtles)
+
+- 320x200 canvas playfield, pixel sprites drawn from string maps, C64-style bleeps via Web Audio, Press Start 2P + Fredoka.
+- Mechanics: home dock, four bobbing purple turtles, far dock with a pile of gear. Hop one position at a time (arrow keys, A/D, two HOP paddles, or tap either half of the pond). Five trips per level. Turtles dive on their own; a fish swims under a turtle as the one warning. Early levels let one turtle dive at a time, later two, then three. Three lives, extra life every second level cleared.
+- Level themes rotate through his teams: pucks, baseballs, basketballs, soccer balls, footballs, gold medals.
+- Layout already handles iPhone portrait (screen on top, paddles below) and landscape (tall paddles either side, screen sized to height). HUD, status line, pause and settings all live inside the screen.
+- **Reading mode is built in** (`READING` config object, off by default). At the far dock he hears a word (speech synthesis) and taps the matching sign from three choices before he can pick up the gear. Wrong picks never cost a life; right picks are +50.
+- Exposes `window.BodieGame` (`reading.enable`, `reading.setWords`, `on(event, cb)`, `getState()`, `start()`) and emits events: `game_start`, `pickup`, `delivery`, `level_up`, `splash`, `game_over`, `word_prompt`, `word_correct`, `word_wrong`. It also `postMessage`s the same events to a parent frame. In the port, replace the global and postMessage with the `GameModule` contract in Section 7.
+- iOS details already solved and worth keeping: audio context unlock on first tap, one-time silent `speechSynthesis` unlock, `touch-action` rules, no text-selection callouts, safe-area padding, `height: 100%` rather than `100vh`, pause on `visibilitychange`.
+
+### `legacy/bodies-books.html` (Bodie's Books)
+
+- Light, readable theme: Fredoka display, Lexend body (chosen for readability), big centred text, one picture per page. Has a proper light and dark theme.
+- **Library.** 20 Level 1 books (`BOOKS` array, ids `allabout`, `bigfish`, `flames`, `seabears`, `canada`, `soccer`, `baseball`, `camp`, `rocks`, `icefish`, `jets`, `riders`, `bigshot`, `hoops`, `snowday`, `tourney`, `bike`, `seadoo`, `dock`, `golf`) and Level 2 versions of the same stories (`L2SRC` rows: `[id, title, sourceBookId, words[], pages[]]`, reusing the Level 1 art). Page text uses `|` as a line break.
+- **Book format.** `{ id, title, color, words: [...sight words to highlight], cover(): svgString, pages: [{ t, alt, art(): svgString }] }`.
+- **Art kit.** `A.*` functions that return SVG strings (sun, cloud, grass, tree, water, rink, net, goal, puck, stick, ball, football, baseball, bat, basketball, hoop, fish, splash, canoe, paddle, rod and more), plus `B()` (the Bodie figure with poses, faces, jerseys) and `person()`. Port this as a typed scene kit. AI-written stories pick scenes from a catalogue built on it; AI never emits raw SVG.
+- **Reader.** Tap any word to hear it. `abc` button highlights sight words (the `SIGHT` set is the Dolch 220 list). "Read this page to me". Progress bar, Back/Next, star screen at the end, per-book best stars.
+- **Sight Word Shootout.** Hockey rink, three nets with words, shooter, goalie saves on a miss. Two modes: Listen and shoot (he hears the word) and Read and shoot (word at centre ice, he reads it aloud, Dad confirms). Ten shots per game. Decks: Rookie, Pro, All-Star, Grade 3, Grade 3 Stretch (Appendix A). A word earns a gold star after three first-try goals; a miss takes one back.
+- **Flash Cards.** One-handed phone layout, big card, swipe right "Got it" or left "Not yet". Not yet is never a fail: the card is spoken and comes back a few cards later; every session ends with every card read. Flip for the word in a hockey sentence. Stars grow once per day per word; three good days = gold star. Missed words go to "My practice pile" until read on the first try. Weekly day dots.
+- **Guide.** Parent-facing: why two levels, the "stuck words" finger test (0 to 1 easy, 2 to 3 just right, 4+ too hard), three-night routine (echo, take turns, he drives), prompts when stuck, signs of progress checklist, goals through November, winter break and spring, protecting the love of reading, when to talk to the teacher. Port verbatim into Dad's Corner; the checklists persist.
+- Storage keys to be aware of (all `localStorage`, origin-bound, so they will not migrate automatically): `bb:page:*`, `bb:done:*`, `bb:wm:*` (word stars), `bb:gbest:*`, `bb:gdeck`, `bb:gmode`, `bb:games`, `bb:fcdeck`, `bb:fcsize`, `bb:fcwarm`, `bb:fcauto`, `bb:sw`, `bb:tab`, `bb:<checkboxId>` (Guide checks). Purple Turtles uses `bpt_best`, `bpt_sound`, `bpt_reading`.
+
+## 4. Architecture and stack (decided)
+
+- **Next.js (App Router, TypeScript)** on **Vercel**. Same shape as Mitch's other projects so Codex and Claude Code can both drive it.
+- **PWA first.** Installable from Safari's Share menu, full screen, offline. Native wrapper (Capacitor) is Phase 5, same codebase.
+- **Supabase** (Postgres) for durable progress and the content library, behind a thin repository layer. **Local-first**: all reads and writes go to IndexedDB (Dexie) and sync to Supabase when online. The app must boot and play with the server down.
+- **Claude API** via Next.js route handlers only (keys never ship to the client). Model ID lives in an env var; default to a current Sonnet-class model.
+- **Rendering.** Purple Turtles stays canvas 2D with its own loop. New cabinets may use canvas or DOM; no game engine dependency unless a cabinet truly needs one. Books stay DOM + inline SVG.
+- **State.** Plain React state plus a small store (Zustand) for the session and engine; no Redux.
+- **Testing.** Vitest for the engine and session logic (pure TypeScript, no DOM). Playwright for the device-size smoke tests in Section 19.
+- **Fonts.** Google Fonts (Fredoka, Lexend, Press Start 2P) self-hosted via `next/font` so they work offline.
+
+## 5. Repo layout (proposed; adjust if the repo already differs)
+
+```
+app/
+  layout.tsx                 shell, theme, PWA meta, safe areas
+  page.tsx                   home: Arcade | Reading Room | Dad
+  arcade/page.tsx            cabinet row
+  arcade/[game]/page.tsx     mounts a GameModule full screen
+  reading/page.tsx           shelf (Level 1, Level 2), Cards, Shootout entry
+  reading/book/[id]/page.tsx reader
+  reading/cards/page.tsx
+  reading/fluency/page.tsx   read-aloud check (Phase 4)
+  session/page.tsx           guided session runner (Phase 2)
+  dad/page.tsx               PIN gate, dashboard, settings, guide, approvals
+  api/ai/story/route.ts
+  api/ai/next-words/route.ts
+  api/ai/summary/route.ts
+lib/
+  engine/                    word engine (pure TS, unit tested)
+  session/                   session shapes and runner logic (pure TS)
+  speech/                    speak(), unlock, voice picking, recognition adapter
+  audio/                     tiny synth used by cabinets
+  db/                        Dexie schema, Supabase client, sync
+  ai/                        prompt builders, validators, approval queue
+games/
+  registry.ts                list of GameModules
+  purple-turtles/            port of legacy game
+  shootout/                  port from Bodie's Books
+  fishing/                   Phase 3
+  canoe/                     Phase 3
+reading/
+  books/                     book data (TS), scene kit, Bodie figure
+  cards/
+  guide/                     Guide content as MDX or TS
+components/                  shared UI (buttons, HUD strip, PIN pad, toasts)
+public/
+  manifest.webmanifest, icons/, splash/
+supabase/migrations/
+legacy/                      the two original HTML files, read-only reference
+docs/HANDOFF.md              this file
+```
+
+## 6. Information architecture
+
+- `/` Home. Big two-door cabinet: ARCADE, READING ROOM. Small lock icon for Dad. If a session is scheduled today and not done, a "Today's run" button sits between the doors (optional; see Section 20).
+- `/arcade` Cabinets as a row of arcade machines. Each shows a marquee, best score, and a "word mode" toggle state. Locked cabinets show "coming soon", never "locked until you read".
+- `/arcade/purple-turtles` and friends. Full-screen game. Landscape layout when the phone is sideways.
+- `/reading` Shelf with tabs: Level 1, Level 2, Cards, Shootout, (Phase 4) Read to Me.
+- `/session` The guided run (Section 10). Launched from Home or Dad's Corner.
+- `/dad` PIN pad, then tabs: Today, Words, Books, Settings, Guide, Approvals.
+
+## 7. Shared contracts
+
+Put these in `lib/engine/types.ts` and `games/types.ts`. Every cabinet implements `GameModule`. The engine is the only thing that writes word progress.
+
+```ts
+// games/types.ts
+export interface GameModule {
+  id: string;                       // 'purple-turtles'
+  title: string;                    // marquee text
+  blurb: string;                    // one line, grade 2 reading level
+  orientation: 'any' | 'landscape-preferred';
+  supportsReadingMode: boolean;
+  mount(el: HTMLElement, ctx: GameContext): GameHandle;
+}
+
+export interface GameContext {
+  readingMode: boolean;
+  draw: (n: number) => Promise<WordDraw>;     // ask the engine for words
+  speak: (text: string) => Promise<void>;     // phone voice, already unlocked
+  report: (ev: GameEvent) => void;            // every event goes through here
+  settings: { sound: boolean; reducedMotion: boolean };
+  session?: { phase: 'warmup' | 'play' | 'free'; budgetMs: number; onBudgetEnd: () => void };
+}
+
+export interface GameHandle { pause(): void; resume(): void; destroy(): void; }
+
+export type GameEvent =
+  | { type: 'game_start' }
+  | { type: 'word_prompt';  word: string; options?: string[]; modality: Modality }
+  | { type: 'word_correct'; word: string; tries: number; ms: number; modality: Modality; helped: boolean }
+  | { type: 'word_wrong';   word: string; picked?: string; modality: Modality }
+  | { type: 'score';        delta: number }
+  | { type: 'level_up';     level: number }
+  | { type: 'life_lost' }
+  | { type: 'game_over';    score: number; durationMs: number };
+
+export type Modality = 'hear-pick' | 'read-pick' | 'read-aloud';
+// hear-pick: hears the word, taps it (he can do alone)
+// read-pick: sees the word, picks the match (alone)
+// read-aloud: reads it out loud, Dad confirms (together). Counts most.
+
+export interface WordDraw { due: Word[]; known: Word[]; fresh: Word[]; }
+export interface Word { id: string; text: string; listId: string; state: WordState; }
+```
+
+```ts
+// lib/engine/types.ts
+export type WordState = 'new' | 'learning' | 'known' | 'star';
+
+export interface WordRecord {
+  wordId: string;
+  state: WordState;
+  box: 0 | 1 | 2 | 3 | 4;          // Leitner box, 0 = practice pile
+  nextDueAt: string;               // ISO date
+  lastSeenAt?: string;
+  firstTryDays: string[];          // distinct days with a first-try correct
+  errors: number;
+  avgMs?: number;                  // response time, hear-pick/read-pick only
+  helpedCount: number;             // speaker tapped before answering
+}
+
+export interface Engine {
+  draw(opts: { count: number; mix?: { known: number; fresh: number }; listIds?: string[] }): WordDraw;
+  record(ev: GameEvent, modality?: Modality): void;
+  due(date?: Date): Word[];
+  practicePile(): Word[];
+  candidatesToIntroduce(n: number): Word[];     // AI may re-rank these, never add to them
+  listProgress(listId: string): { total: number; known: number; star: number };
+  gates(): { unlockedLists: string[]; nextGate: { listId: string; need: number; have: number } | null };
+}
+```
+
+The Purple Turtles port maps its existing events onto `GameEvent` one to one (`word_correct` already carries `tries`; add `ms` and `modality: 'hear-pick'`).
+
+## 8. Data model
+
+Supabase tables (mirror the same shapes in Dexie):
+
+- `kids` (id, name, created_at). One row. Designed so a second kid is possible later.
+- `word_lists` (id, name, sub, order). The five decks in Appendix A, plus a `dolch` list used for highlighting.
+- `words` (id, text, list_id, order, confusable_group nullable). Confusable groups: there/their/they're, was/saw, where/were, then/than, of/off, on/no.
+- `word_state` (kid_id, word_id, state, box, next_due_at, last_seen_at, first_try_days text[], errors, avg_ms, helped_count).
+- `sessions` (id, kid_id, shape, started_at, ended_at, minutes, phases jsonb, ended_on_win bool).
+- `events` (id, kid_id, session_id nullable, game_id, type, word_id nullable, payload jsonb, at). Append-only. Everything in Dad's Corner is derived from this plus `word_state`.
+- `books` (id, title, level 1|2, color, words text[], pages jsonb, source 'hand'|'ai', status 'approved'|'pending'|'rejected', created_at, approved_at).
+- `book_progress` (kid_id, book_id, best_stars, last_page, completed_count).
+- `fluency_runs` (id, kid_id, passage_id, wcpm, accuracy, transcript, duration_s, at).
+- `settings` (kid_id, dad_pin_hash, session_minutes int default 11, quick_minutes int default 3, free_play 'always'|'after-session' default 'always', lists_enabled text[], voice_name, sound bool).
+- `approvals` (id, kind 'story'|'next-words'|'summary', payload jsonb, status, created_at, decided_at).
+
+Rules:
+- The client never writes `word_state` directly. It calls `engine.record(ev)`, which writes locally and queues a sync.
+- Sync is last-write-wins per row with `updated_at`; the engine is deterministic given the event log, so a full rebuild from `events` is the recovery path.
+- One SQL `delete from events where kid_id = ...` chain must remove everything about the kid.
+
+## 9. Word engine spec
+
+### States and gates
+
+- `new`: never shown.
+- `learning`: shown at least once.
+- `known`: read correctly on the **first try on three distinct days** (same rule as the existing stars). Any modality counts, but `read-aloud` counts double (one read-aloud first-try day = two days of credit, capped at the three needed).
+- `star`: `known` and survived box 4 (a correct answer when it came due at the 21-day interval).
+- A miss on a `known` word drops it to `learning` with box 0 (practice pile). It needs one first-try day to return to `known`. A miss on a `star` word drops it to `known`, box 2.
+- **List gate:** the next list unlocks when 90% of the current list is `known` or better. Lists in order: rookie, pro, allstar, grade3, grade3plus. Dad can unlock any list manually in Settings.
+
+### Scheduling (Leitner)
+
+Boxes and intervals: 0 = practice pile (comes back in the same session, after 3 to 5 other cards), 1 = 1 day, 2 = 3 days, 3 = 7 days, 4 = 21 days.
+
+- Correct, first try, not helped: box + 1 (max 4), `nextDueAt` = today + interval(box).
+- Correct after a retry, or helped (speaker tapped first): box stays, `nextDueAt` = today + 1 day.
+- Wrong: box = 0, `errors` + 1, added to practice pile.
+- A word can only gain first-try-day credit once per calendar day (America/Winnipeg), matching the existing Flash Cards rule.
+
+### Drawing words for a game
+
+`draw({count, mix})` returns, in priority order:
+1. Practice pile words (box 0), up to 30% of the count.
+2. Due words (nextDueAt <= today), oldest due first.
+3. Known words as filler to reach the `known` share (default 80%).
+4. Fresh words (`new` or `learning` with fewer than 3 exposures) for the remaining share (default 20%), never more than 3 fresh words in one draw.
+- Distractors for hear-pick and read-pick: prefer the word's confusable group, then words of similar length from the same list, then anything. Never show two words from the same confusable group as the target in one session for a `learning` word (it muddles them); do pair them for `known` words (it sharpens them).
+
+### What counts most
+
+Priority of evidence, highest first: `read-aloud` first try > `read-pick` first try > `hear-pick` first try > retries. Dad's dashboard shows the modality mix so "he knows 60 words" is not mistaken for "he can read 60 words".
+
+Unit tests required: box transitions, three-distinct-days rule, double credit for read-aloud, 90% gate, draw mix ratios, confusable rules, same-day cap, timezone boundaries.
+
+## 10. Session spec
+
+A session is a scripted run through the app with a timer. The runner lives in `lib/session/` and is pure logic; pages render its phases.
+
+### Full run (default 11 minutes)
+
+1. **Warm-up, 3 min.** One cabinet in word mode using only `known` and due words. Ends when the budget ends (the game shows a "nice warm-up!" banner at a safe moment, never mid-jump).
+2. **New words, 2 min.** Two or three Flash Cards from `candidatesToIntroduce` (or the AI-approved list). Each: hear it, see it big, see it in a sentence, say it. No scoring.
+3. **Play, 4 min.** Cabinet of his choice in word mode, 80/20 mix. Score counts.
+4. **Cool-down, 2 min.** One Level 1 book on his own, or one Level 2 book "together" (Dad present toggle). Tap-to-hear allowed.
+5. **Win screen.** Stars earned today, one word that just turned gold if any, confetti. Then back to free play.
+
+### Quick run (default 3 minutes)
+
+Six Flash Cards from the due list, practice pile first. Ends on the last card read; no timer pressure shown to Bodie.
+
+### Rules
+
+- The timer is Dad-visible and Bodie-invisible. Bodie sees a progress bar of "stops" (4 dots), not minutes.
+- One full session per day counts toward the week dots; extra runs are fine and still record words.
+- If Bodie quits mid-session, record what happened and show nothing negative. The day dot stays empty until a full run finishes.
+- Reading-mode prompts inside games are rate-limited: at most one word prompt per 20 seconds of play, so the game stays a game.
+
+## 11. Fluency check (Phase 4)
+
+Purpose: the one number that says whether his reading level is rising. Dad-facing only.
+
+- Passages: 60 to 120 words, built from approved books or AI stories, tagged with level.
+- Flow: Dad taps Start, Bodie reads aloud, Dad taps Stop (or 60 seconds elapse). Recognition runs during the read.
+- Recognition adapter: Web Speech API (`webkitSpeechRecognition`, `continuous`, `interimResults`) in Safari; `@capacitor-community/speech-recognition` under Capacitor. Both are imperfect on kid voices, so:
+  - Align the transcript to the passage with a word-level diff (Levenshtein over tokens, case and punctuation stripped). Correct = matched; substitutions, omissions = errors; insertions ignored.
+  - WCPM = correct words / minutes read. Accuracy = correct / passage words read.
+  - Dad can tap words in the review screen to flip a mis-recognition before saving. Save stores the corrected count.
+- Show Bodie stars and "faster than last time" only. Never a number.
+- Dad's chart: WCPM over time with a reference band for grade 3 (Hasbrouck and Tindal 2017, 50th percentile: about 83 WCPM in fall, 97 winter, 112 spring; 25th percentile roughly 59, 79, 91). Label it "reference, not a test".
+
+## 12. AI features and guardrails
+
+All AI calls go through `app/api/ai/*` route handlers using the official Anthropic SDK. Every output is validated in code before it reaches the approval queue, and nothing reaches Bodie without Dad approving it in `/dad/approvals`.
+
+### 12.1 Story generator (`/api/ai/story`)
+
+Input: `{ level: 1 | 2, interest: string, knownWords: string[], newWords: string[], names: ['Bodie','Dad', ...], existingTitles: string[] }`.
+
+Prompt rules (put them in `lib/ai/prompts/story.ts`):
+- Level 1: 8 to 10 pages, one sentence per page, 4 to 8 words, present tense, mostly sight words.
+- Level 2: the same story told with 2 or 3 sentences per page, 15 to 25 words, past tense, -ed and -ing endings, dialogue.
+- Vocabulary: only `knownWords` + `newWords` + `names` + a small fixed allow-list of nouns for the interest (puck, net, rink, fish, canoe, lake, etc., maintained in code). Each `newWord` must appear at least twice.
+- Output JSON: `{ title, pages: [{ text, scene: { template, props } }] }` where `scene.template` is one of the catalogue ids built on the scene kit (e.g. `rink-shot`, `dock-fishing`, `canoe-lake`, `field-kick`). AI never emits SVG.
+- Tone: Bodie is the hero, Dad shows up, things go a little wrong then right. No scary content, no losing streaks, no moralising.
+
+Validator (code, not AI): every token in every page must be in the allowed set after stripping punctuation; page counts and lengths within limits; template ids exist; title unique. Fail = regenerate once, then surface the failure to Dad with the reason.
+
+### 12.2 Next words (`/api/ai/next-words`)
+
+Input: `engine.candidatesToIntroduce(8)` plus the kid's last 30 days of `word_wrong` events and confusable groups. Output: an ordered pick of 3 with one-line reasons ("'their' pairs with 'there', which he knows; introduce together"). The AI may only reorder or drop from the candidates. Validated by set membership.
+
+### 12.3 Weekly summary (`/api/ai/summary`)
+
+Input: computed stats only (words known/star by list, minutes, sessions, modality mix, top missed words, fluency trend). Output: 120 to 180 words for Dad, plus one concrete thing to try this week, chosen from the Guide's own prompts. The summary may not mention anything not in the stats object. Store it; optionally email it (Phase 5 or later).
+
+### 12.4 Guardrails
+
+- AI never changes a gate, a box, a star or a setting. It proposes; the engine and Dad decide.
+- No AI call during a Bodie session (latency and content control). Generate ahead of time; cache.
+- Strip any instruction-like text from AI output before display (defensive; stories are plain prose).
+- Log every prompt and response to `approvals.payload` so a bad story can be traced.
+- Rate limit: 20 generations a day. Cost at that rate is a few dollars a month.
+
+## 13. Arcade cabinets
+
+### Port: Purple Turtles (Phase 1)
+
+- Move the canvas loop, sprites, audio and layout into `games/purple-turtles/` with `mount()` creating the DOM it needs inside the given element and `destroy()` tearing down listeners and the RAF loop.
+- Replace `window.BodieGame` and `postMessage` with `ctx.report` and `ctx.draw`. Replace the internal Dolch list with engine draws (the game keeps a local queue of 10 words and refills).
+- Keep `#reading`-style quick toggles out; reading mode comes from `ctx.readingMode`.
+- Add haptics hook points (`onHop`, `onSplash`, `onDelivery`) that no-op on web and call Capacitor Haptics in Phase 5.
+- Keep the in-screen HUD, status strip and pause/settings sheet; swap the settings sheet's grown-up notes for a link to Dad's Corner.
+
+### Port: Sight Word Shootout (Phase 1, from Bodie's Books)
+
+Same rules as the legacy version (ten shots, listen mode and read mode, goalie saves on a miss). Read mode reports `modality: 'read-aloud'` with Dad confirming via the Score/Save buttons. Stars now come from the engine, not local counters.
+
+### New cabinet: Fishing for Words (Phase 3)
+
+- Side view of the dock from Purple Turtles. Fish swim by carrying word signs. He hears a word, taps the matching fish to cast; a hooked fish fights (tap-mash to reel) and lands in the bucket. Wrong fish just swims off (no penalty). Five fish per round, timed bucket bonus. Levels: more fish, faster, confusable pairs together.
+- Modality: `hear-pick`; a read mode shows the word on the bucket instead (`read-pick`).
+
+### New cabinet: Canoe Rapids (Phase 3)
+
+- Top-down river scroller. Gates of two or three buoys ahead, each with a word; steer (tilt or two paddles) through the buoy that matches the spoken word. Missing a gate bumps a rock and spins the canoe (lose time, not a life). Deer, beaver and a fishing Dad on the banks as scenery. Three rapids per run.
+- Modality: `hear-pick`, with `read-pick` mode showing the target on a sign at the bow.
+
+### Cabinet rules
+
+- Every cabinet must run with `readingMode: false` as a plain game, and with `true` as a reading game, from one codebase.
+- Must pass the plugin harness: a fake `GameContext` that counts events and asserts `game_over` fires, `destroy()` clears listeners, and no word prompt fires more often than the session rate limit.
+- Must render in portrait and landscape at iPhone sizes, with paddles or controls reachable by thumbs.
+
+## 14. Reading Room
+
+- Port the book data to TypeScript (`reading/books/data.ts`) keeping ids, titles, colours, words and page text exactly. Port the scene kit and `B()` figure to typed functions returning SVG strings; wrap in a `<Scene>` component.
+- Reader: keep tap-to-hear, `abc` highlighting, "read to me", progress, stars. Sight-word highlighting uses the Dolch list plus any word in an enabled list.
+- Flash Cards: port the swipe/flip interaction; the deck comes from `engine.due()` and the practice pile; "Got it"/"Not yet" report `read-aloud` events with `helped` set if the speaker was tapped first.
+- Shelf: Level 1, Level 2, and (Phase 4) "New stories" for approved AI books, marked with a small "new" tag. Pending AI books are invisible here.
+- (Phase 4) Read to Me: the fluency check, launched by Dad.
+
+## 15. Dad's Corner
+
+- PIN pad (4 digits, hashed, 30-minute unlock, no biometrics in PWA). Three wrong tries = 60-second wait.
+- **Today:** today's run status, minutes this week, the day dots, "Start a full run / quick run" buttons.
+- **Words:** per list: total / known / star, the practice pile, confusable groups with error counts, modality mix. Tap a word for its history.
+- **Books:** completion and stars per book; approvals queue for AI stories with full preview; regenerate or reject with a reason.
+- **Fluency:** WCPM and accuracy over time with the reference band (Phase 4).
+- **Settings:** session lengths, free-play rule, enabled lists, manual unlock, voice choice (list the phone's English voices; default en-CA if present), sound, reset options (with a typed confirmation, since `confirm()` is unreliable).
+- **Guide:** the parent Guide verbatim, with the persisted checklists and tallies.
+- **Weekly summary:** latest AI summary and the archive.
+
+## 16. iOS and PWA requirements
+
+Phase 1 (PWA):
+- `manifest.webmanifest`: name "Bodie's Arcade", short_name "Arcade", `display: standalone`, `orientation: any`, `background_color` and `theme_color` from the arcade palette, 192/512 icons, maskable icon.
+- `<meta name="apple-mobile-web-app-capable" content="yes">`, `apple-mobile-web-app-status-bar-style: black-translucent`, `apple-touch-icon` 180px, `viewport` with `viewport-fit=cover`, iOS splash images optional.
+- Service worker (Serwist or next-pwa): precache the app shell, fonts, book data and scene kit; runtime-cache nothing from the API; an offline fallback route. Verify the installed app opens with airplane mode on.
+- Safe areas on every edge: `env(safe-area-inset-*)` for paddles, HUD, bottom bars. The notch can be on the left or right in landscape.
+- Touch: `touch-action: none` on game surfaces, `manipulation` on buttons, `-webkit-touch-callout: none`, `user-select: none` on play surfaces, `overscroll-behavior: none` on the body, inputs at 16px or larger so Safari does not zoom.
+- Sizing: `height: 100%` chain, never `100vh`; recompute the game stage on `resize`, `orientationchange` and `visualViewport.resize` (the Purple Turtles `layout()` does this already).
+- Audio: create and resume the AudioContext on the first tap; one-time silent `speechSynthesis.speak()` unlock on that same tap; iOS mutes Web Audio when the ring/silent switch is off, and that cannot be fixed in a PWA (say so in Settings).
+- Storage: Dexie for everything; Safari can evict site data for sites not used in 7 days, installed web apps are safer, Supabase sync is the real safety net.
+- No `alert`, `confirm`, `prompt`. No `window.open`. No downloads.
+- Install flow: a one-time "Add to Home Screen" card with the Safari Share icon, shown only in Safari when not installed (`navigator.standalone === false`).
+
+Phase 5 (Capacitor):
+- `@capacitor/ios`, `@capacitor/haptics` (hop, land, splash, goal), `@capacitor/local-notifications` (optional "reading time" reminder set by Dad), `@capacitor/screen-orientation` (lock landscape on cabinets that prefer it), `@capacitor-community/speech-recognition`, `@capacitor/status-bar`.
+- Set `AVAudioSession` category to `playback` in `AppDelegate` so bleeps play with the ringer off.
+- Build in Xcode on the Mac. Apple Developer Program required (99 USD a year). Distribute by TestFlight to family devices (builds expire after 90 days; re-upload) or publish free in the Kids category (no third-party analytics or ads, parental gate on outbound links, privacy policy URL).
+- Keep the web build working; Capacitor wraps `out/` from `next build` with static export, so avoid server components that need a server at runtime except the `/api/ai/*` routes, which the native app calls over HTTPS at the Vercel URL.
+
+## 17. Design language
+
+Two wings, two moods, one family.
+
+**Arcade (from Purple Turtles).** Night-purple cabinet around a bright pond. Tokens: bg `#150f30`, cabinet `#241a56`, cabinet edge `#4a35a8`, screen bezel `#0a0720`, text `#f5f0ff`, muted `#b7a9ea`, accent red `#ff4a3d` (shadow `#9a1e17`), turtle purple `#b07cf5`, good `#58e070`, warn yellow `#ffd23f`, bad `#ff6b6b`. Display: Press Start 2P for HUD and marquees only. Body: Fredoka. Single theme by design (it is a dark cabinet). Buttons are chunky with a hard 5 to 6px drop shadow that presses down.
+
+**Reading Room (from Bodie's Books).** Light and calm. Tokens: bg `#eaf2f8`, panel `#ffffff`, text `#152338`, muted `#5c6c83`, line `#cbd8e4`, accent `#e2422b`, sun `#f6b73c`, sight-word highlight `#fff1b8` with a `#f6b73c` underline, go-green `#23894a`. Display: Fredoka. Body: Lexend (readability). Full light and dark themes using the token structure in the legacy file.
+
+**Shared rules.** Big tap targets (44px minimum, 60px for anything Bodie hits in play). Big type for Bodie. One accent per screen. Semantic colours (good/warn/bad) are separate from the accent. Motion is short and purposeful; respect `prefers-reduced-motion`. Copy: short, specific, kind. Praise the move, not just the answer ("You went back and fixed it. That's what good readers do."). No em dashes.
+
+## 18. Phases and "done when"
+
+### Phase 1: Shell and port
+- Next.js app with the routes in Section 6, PWA installable, fonts self-hosted.
+- Purple Turtles and Shootout as `GameModule`s; Books, Flash Cards and the Guide ported with the same content.
+- Progress stored locally (Dexie) with the engine stubbed to the legacy star rules.
+- Done when: installed on an iPhone from Safari; opens full screen; Purple Turtles plays in landscape with sound; a book reads with tap-to-hear; Shootout and Cards record stars; airplane mode still boots the app; Lighthouse PWA checks pass; zero console errors on the device matrix.
+
+### Phase 2: Word engine and sessions
+- Engine per Section 9 with unit tests; Supabase schema per Section 8 with sync.
+- Session runner per Section 10; Dad's Corner Today, Words, Settings, Guide.
+- Done when: a full run completes end to end on an iPhone; word states survive a reinstall (via Supabase); dashboard numbers match a hand count from the event log; tests green.
+
+### Phase 3: New cabinets
+- Fishing for Words, then Canoe Rapids, each passing the plugin harness and device matrix.
+- Done when: both are playable in plain and reading mode, with a best-score marquee, and Bodie picks them on his own.
+
+### Phase 4: AI
+- Story generator with validator and approvals; next-words; weekly summary; fluency check with chart.
+- Done when: a generated Level 1 story about hockey passes validation, is approved in Dad's Corner, appears on the shelf, and reads correctly; a fluency run records WCPM; a weekly summary is produced from a week of real events.
+
+### Phase 5: Native
+- Capacitor wrap, haptics, orientation lock, notifications, speech plugin, audio session.
+- Done when: TestFlight build runs on two family iPhones with the above working, and the web build still deploys.
+
+## 19. Test checklist and device matrix
+
+Run before closing any phase:
+
+- iPhone (Safari, then installed PWA): portrait and landscape, notch left and right. Nothing clipped, no horizontal scroll, paddles under thumbs, HUD readable.
+- iPad: both orientations.
+- Desktop Chrome at 1280x800 and a short wide window (1000x500) for the landscape path with a keyboard.
+- Reduced motion on. Dark mode on (Reading Room). Sound off then on. Airplane mode.
+- Playwright smoke: boot each route at 390x664, 844x390, 1024x768 with no console errors and `scrollWidth === clientWidth`.
+- Engine tests green. Plugin harness green for every cabinet.
+- A five-minute play test with Bodie. Watch for: taps that do nothing, text he cannot read, a moment that felt like failing.
+
+## 20. Open decisions (defaults in bold)
+
+1. Free play rule: **always available**, or only after the day's session. (Section 2 reasoning.)
+2. Session length default: **11 minutes** full, **3** quick.
+3. Dad's Corner gate: **4-digit PIN**, or a magic link to Mitch's email.
+4. Dad's "together" toggle: **manual toggle at session start**, or inferred from read-aloud mode.
+5. Second kid support: **schema allows it, UI does not** until asked.
+6. Fluency recognition engine: **Web Speech in Safari**, Capacitor plugin later.
+7. Email the weekly summary: **no** for now; show in Dad's Corner.
+8. Khan Academy: **link-outs from Dad's Corner only** (grade 2 and 3 Reading and Vocabulary units), with a parent check-off; no embedding, no content copied.
+9. Extra content sources (Dolch and Fry lists are public domain; CKLA and UFLI decodables are free to use with their own terms): **Dolch and Fry only in v1**; review the others' terms before importing text.
+10. Name: **Bodie's Arcade** for the app; the Reading Room keeps "Bodie's Books" as its shelf title.
+
+## Appendix A: word lists
+
+Order and gating follow this sequence. Keep the exact words; they match the stars Bodie has already earned.
+
+- **rookie** (The first 40 sight words): a and away big blue can come down find for funny go help here I in is it jump little look make me my not one play red run said see the three to two up we where yellow you
+- **pro** (The next 52 words): all am are at ate be black brown but came did do eat four get good have he into like must new no now on our out please pretty ran ride saw say she so soon that there they this too under want was well went what white who will with yes
+- **allstar** (Grade 1 and 2 words): after again an any as ask by could every fly from give going had has her him his how just know let live may of old once open over put round some stop take thank them then think walk were when always around because been before best both call does fast first found gave green its made many off or pull read right sing sit sleep tell their these those upon us use very which why work would write your
+- **grade3** (The grade 3 sight words): about better bring carry clean cut done draw drink eight fall far full got grow hold hot hurt if keep kind laugh light long much myself never only own pick seven shall show six small start ten today together try warm
+- **grade3plus** (Grade 3 Stretch): above almost along answer became below between different during early enough finally friend group half heard important learn minute often people piece question really second sometimes special sure thought through toward until whole without young world
+- **dolch** (highlight-only): the 220-word Dolch set in `legacy/bodies-books.html` (`var SIGHT`).
+
+## Appendix B: event names (stable, used by the dashboard)
+
+`game_start`, `word_prompt`, `word_correct`, `word_wrong`, `score`, `level_up`, `life_lost`, `game_over`, `book_opened`, `page_read`, `word_tapped` (tap-to-hear), `book_finished`, `card_got`, `card_not_yet`, `session_started`, `session_phase`, `session_finished`, `fluency_run`.
+
+## Appendix C: legacy mapping cheat sheet
+
+| Legacy | New home |
+|---|---|
+| `purple-turtles.html` game loop, sprites, audio, layout() | `games/purple-turtles/` |
+| `READING` config and word choice overlay | `ctx.readingMode` + engine draws |
+| `window.BodieGame` events | `ctx.report(GameEvent)` |
+| `BOOKS`, `L2SRC`, `LEVEL2`, `SIGHT` | `reading/books/data.ts`, `lib/engine/lists.ts` |
+| `A.*` art kit, `B()`, `person()` | `reading/books/scene-kit.ts` |
+| Shootout (`DECKS`, modes, stars) | `games/shootout/` + engine |
+| Flash Cards (deck, swipe, practice pile) | `reading/cards/` + engine |
+| Guide cards and checklists | `reading/guide/` rendered in `/dad` |
+| `bb:*`, `bpt_*` localStorage | Dexie tables; no automatic migration (different origin) |
+
+## Build log
+
+Newest first. One entry per phase or notable decision. Keep it short.
+
+### 2026-11-02: Phase 1 shell (first cut)
+
+- Repo scaffolded with Next.js 16 (App Router, TypeScript), **static export** (`output: 'export'`) so the same `out/` deploys to Vercel or GitHub Pages today and wraps in Capacitor in Phase 5. GitHub Pages needs a base path; `NEXT_PUBLIC_BASE_PATH` handles it and the workflow sets it.
+- PWA: `manifest.webmanifest`, 192/512/maskable/apple-touch icons, hand-written `public/sw.js` (precache shell, play pages, fonts, icons; network-first pages with offline fallback; cache-first assets). Fonts self-hosted in `public/fonts/` (latin subsets) and shared by the shell and both play pages.
+- The two legacy apps run **unchanged** as full pages at `/play/*.html`, generated from `legacy/` by `scripts/adapt-legacy.mjs` (wraps as standalone documents, swaps Google Fonts for the local copies, adds a HOME button, adds `#l1 #l2 #cards #game #guide` deep links to Bodie's Books). This is the pragmatic first step; the `GameModule` port of Purple Turtles and the Shootout into `games/` is the next piece of Phase 1.
+- Contracts from Section 7 are in `games/types.ts` and `lib/engine/types.ts`. Appendix A lists are in `lib/engine/lists.ts` with Vitest coverage (sizes, no overlap, Dolch 220, confusables).
+- Dad's Corner (Phase 1 scope): 4-digit PIN (SHA-256 hash, 30-minute unlock, 3 misses = 60-second wait), Today, Words, Settings and Guide tabs reading the legacy `bb:*` and `bpt_*` keys directly, so progress Bodie already earned shows up. No Dexie yet; that lands with the engine in Phase 2.
+- Playwright smoke in `tests/smoke.spec.ts` boots every route at 390x664, 844x390 and 1024x768 with no console errors, no failed requests and no sideways scroll.
+- Open point for Phase 4: static export has no server, so `app/api/ai/*` route handlers will need either Vercel without static export (drop `output: 'export'`, keep the native app pointed at the Vercel URL) or a separate small function. Decide when Phase 4 starts.

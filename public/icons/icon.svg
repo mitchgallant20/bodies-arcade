@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Bodie's Arcade">
+  <rect width="512" height="512" rx="110" fill="#150f30"/>
+  <rect x="40" y="40" width="432" height="432" rx="80" fill="#241a56" stroke="#4a35a8" stroke-width="12"/>
+  <ellipse cx="256" cy="330" rx="170" ry="54" fill="#2f9fd1"/>
+  <path d="M110 330 q36 -14 72 0 t72 0 t72 0 t72 0" fill="none" stroke="#8ad4f2" stroke-width="10" stroke-linecap="round"/>
+  <ellipse cx="256" cy="268" rx="118" ry="78" fill="#b07cf5"/>
+  <ellipse cx="256" cy="262" rx="88" ry="54" fill="#8c5de0"/>
+  <path d="M212 236 l44 -22 l44 22 l-14 48 l-60 0 z" fill="#b07cf5"/>
+  <circle cx="376" cy="262" r="38" fill="#b07cf5"/>
+  <circle cx="390" cy="252" r="7" fill="#150f30"/>
+  <path d="M150 300 l-40 24 M362 304 l40 22" stroke="#b07cf5" stroke-width="26" stroke-linecap="round"/>
+  <circle cx="300" cy="120" r="34" fill="#ffd23f"/>
+  <path d="M300 60v18M300 162v18M240 120h18M342 120h18M258 78l12 12M330 150l12 12M342 78l-12 12M270 150l-12 12" stroke="#ffd23f" stroke-width="10" stroke-linecap="round"/>
+</svg>

@@ -1,3 +1,7 @@
+# Agent notes
+
+Start with `CLAUDE.md`, then `docs/HANDOFF.md`. The `legacy/` files are read-only reference.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 ## This is NOT the Next.js you know

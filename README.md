@@ -1,36 +1,45 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Bodie's Arcade
 
-## Getting Started
+Retro mini games and picture books that teach sight words, as one installable iPhone web app. Two wings and a parent room:
 
-First, run the development server:
+- **Arcade.** Purple Turtles (a Commodore 64 remake) and the Sight Word Shootout, each playable plain or in word mode.
+- **Reading Room.** Bodie's Books: Level 1 and Level 2 picture books, tap-to-hear, Flash Cards, and the parent Guide.
+- **Dad's Corner.** PIN-gated progress, settings and the Guide.
 
-```bash
+The full spec is `docs/HANDOFF.md`. The finished single-file apps it builds on live in `legacy/`.
+
+## Run it
+
+```
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000. The games live at `/play/purple-turtles.html` and `/play/bodies-books.html` (generated from `legacy/` on every build).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Test it
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+npm test            # engine logic (vitest)
+npm run build       # static export to out/
+npm run test:e2e    # device-size smoke tests against out/ (playwright)
+```
 
-## Learn More
+## Put it on an iPhone
 
-To learn more about Next.js, take a look at the following resources:
+1. Deploy (below) and open the URL in **Safari** on the phone.
+2. Tap **Share**, then **Add to Home Screen**, then **Add**.
+3. Open it from the icon. It runs full screen and keeps working with no signal.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+A one-time card on the home page walks through the same steps.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Deploy
 
-## Deploy on Vercel
+The app is a static export (`out/`), so any static host works.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- **GitHub Pages.** Push to `main`. `.github/workflows/pages.yml` builds, tests and publishes to `https://<owner>.github.io/<repo>/`. In the repo settings, set Pages to "GitHub Actions" once.
+- **Vercel.** Import the repo; no settings needed. Vercel serves `out/`.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Status
+
+Phase 1 shell: installable PWA, offline, both legacy apps wired in, contracts and word lists with tests, device smoke tests. Next: port Purple Turtles and the Shootout to the `GameModule` contract, then the word engine (Phase 2). See the build log at the end of `docs/HANDOFF.md`.
