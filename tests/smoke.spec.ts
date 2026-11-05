@@ -63,6 +63,26 @@ test("purple turtles reaches its title screen", async ({ page }) => {
   await expect(page.locator("#title a[data-home]")).toBeVisible();
 });
 
+test("content/books are on the Level 2 shelf and open by deep link", async ({ page }) => {
+  await page.goto("/play/bodies-books.html#l2", { waitUntil: "networkidle" });
+  const card = page.locator('#shelf .book[data-id="comeback"]');
+  await expect(card).toBeVisible();
+  await expect(card.locator(".lvl")).toHaveText("LEVEL 2");
+  await expect(card.locator(".pages")).toHaveText("16 pages");
+
+  await page.goto("/play/bodies-books.html#comeback", { waitUntil: "networkidle" });
+  await expect(page.locator("#rTitle")).toHaveText("The Big Comeback");
+  await expect(page.locator("#rPg")).toHaveText("1 / 16");
+  await expect(page.locator("#art svg")).toBeVisible();
+  // Every page renders art (an SVG) and text, with no page errors; "—" (em dash) never appears.
+  for (let i = 0; i < 16; i++) {
+    await expect(page.locator("#art svg")).toBeVisible();
+    expect(await page.locator("#txt").innerText()).not.toContain("—");
+    await page.locator("#nextBtn").click();
+  }
+  await expect(page.locator("#txt")).toContainText("You read the whole book!");
+});
+
 test("bodie's books deep-links to the Cards shelf", async ({ page }) => {
   await page.goto("/play/bodies-books.html#cards", { waitUntil: "networkidle" });
   await expect(page.locator("#tab-cards")).toHaveAttribute("aria-selected", "true");

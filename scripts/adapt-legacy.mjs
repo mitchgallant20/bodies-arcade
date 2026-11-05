@@ -2,7 +2,7 @@
 // source of truth (docs/HANDOFF.md, Section 3); this script only wraps them as
 // standalone pages, swaps Google Fonts for the self-hosted copies, and adds a way home.
 // Runs automatically before `next build` (see package.json "prebuild").
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -10,6 +10,19 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const src = join(root, "legacy");
 const out = join(root, "public", "play");
 mkdirSync(out, { recursive: true });
+
+// New books live in content/books/*.js (one book per file, same shape as the legacy BOOKS and
+// LEVEL2 entries, pushed onto those arrays). They are inlined into Bodie's Books right before
+// ALL is built, so the page's art kit is in scope. The legacy file itself stays untouched.
+const booksDir = join(root, "content", "books");
+const extraBooks = existsSync(booksDir)
+  ? readdirSync(booksDir).filter((f) => f.endsWith(".js")).sort()
+      .map((f) => {
+        const js = readFileSync(join(booksDir, f), "utf8");
+        if (/<\/script/i.test(js)) throw new Error(`content/books/${f}: must not contain </script>`);
+        return `\n/* ---- content/books/${f} ---- */\n${js}`;
+      }).join("")
+  : "";
 
 const head = (themeColor) => `<!doctype html>
 <html lang="en">
@@ -87,5 +100,9 @@ wrap("bodies-books.html", "#eaf2f8", (body) => {
   // Hash deep links to shelf tabs (l1, l2, game, cards, guide) alongside the existing book ids.
   body = mustReplace(body, "else if(findBook(h))openBook(h);",
     "else if(findBook(h))openBook(h);\n  else if(NOTES[h])setTab(h);", "tab deep link");
+  // Extra books from content/books/, inlined before ALL so findBook and the shelves see them.
+  // A function replacement keeps "$" in the book source literal.
+  body = mustReplace(body, "var ALL=BOOKS.concat(LEVEL2);",
+    () => `${extraBooks}\nvar ALL=BOOKS.concat(LEVEL2);`, "extra books hook");
   return body;
 });
