@@ -37,15 +37,12 @@ export default function CabinetRow() {
               {c.supportsReadingMode && <span>Word mode ready</span>}
             </div>
           )}
-          <div className="actions">
-            {c.status === "ready" && c.href && (
-              <a className="btn" href={withBase(c.href)}>PLAY</a>
-            )}
-            {c.status === "ready" && c.readingHref && (
-              <a className="btn ghost" href={withBase(c.readingHref)}>WORD MODE</a>
-            )}
-            {c.status === "soon" && <span className="chip">{c.phase}</span>}
-          </div>
+          {c.status === "ready" && (
+            <div className="actions">
+              {c.href && <a className="btn" href={withBase(c.href)}>PLAY</a>}
+              {c.readingHref && <a className="btn ghost" href={withBase(c.readingHref)}>WORD MODE</a>}
+            </div>
+          )}
         </article>
       ))}
     </div>

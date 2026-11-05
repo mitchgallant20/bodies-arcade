@@ -1,6 +1,5 @@
 import Link from "next/link";
 import InstallCard from "@/components/InstallCard";
-import { withBase } from "@/lib/base";
 
 export default function Home() {
   return (
@@ -23,7 +22,7 @@ export default function Home() {
           <span className="label">ARCADE</span>
           <span className="sub">Purple Turtles and the Shootout. Play for fun, or play with words.</span>
         </Link>
-        <a className="door reading" href={withBase("/play/bodies-books.html")}>
+        <Link className="door reading" href="/reading">
           <svg viewBox="0 0 64 64" aria-hidden="true">
             <path d="M8 12h20a6 6 0 0 1 4 2 6 6 0 0 1 4-2h20v38H36a4 4 0 0 0-4 2 4 4 0 0 0-4-2H8z" fill="#f6b73c" />
             <path d="M12 16h16v30H12zM36 16h16v30H36z" fill="#fff" />
@@ -31,7 +30,7 @@ export default function Home() {
           </svg>
           <span className="label">READING ROOM</span>
           <span className="sub">Bodie&apos;s Books. Stories about you, flash cards, and the Shootout.</span>
-        </a>
+        </Link>
       </nav>
 
       <InstallCard />

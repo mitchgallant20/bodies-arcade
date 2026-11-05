@@ -42,6 +42,21 @@ test("manifest and service worker are served", async ({ request }) => {
   }
 });
 
+test("home doors open the two wings", async ({ page }) => {
+  await page.goto("/", { waitUntil: "networkidle" });
+  await expect(page.getByRole("link", { name: /^ARCADE/ })).toHaveAttribute("href", /\/arcade\/?$/);
+  await expect(page.getByRole("link", { name: /^READING ROOM/ })).toHaveAttribute("href", /\/reading\/?$/);
+});
+
+test("arcade cabinets carry no build jargon", async ({ page }) => {
+  await page.goto("/arcade/", { waitUntil: "networkidle" });
+  await expect(page.locator(".cabinet")).toHaveCount(4);
+  await expect(page.getByText(/Phase \d/)).toHaveCount(0);
+  // "COMING SOON" sits on its own line under the title.
+  const soon = page.locator(".cabinet .screen.soon").first();
+  await expect(soon).toHaveCSS("white-space", "pre-line");
+});
+
 test("purple turtles reaches its title screen", async ({ page }) => {
   await page.goto("/play/purple-turtles.html", { waitUntil: "networkidle" });
   await expect(page.locator("#playBtn")).toBeVisible();

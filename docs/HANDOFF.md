@@ -489,6 +489,14 @@ Order and gating follow this sequence. Keep the exact words; they match the star
 
 Newest first. One entry per phase or notable decision. Keep it short.
 
+### 2026-11-02: Shell fixes after first review
+
+- Home's READING ROOM door now goes to `/reading/` (the shelf), matching the Arcade door and the IA in Section 6. The shelf deep-links into the legacy page by tab, so Bodie lands on Level 1, Cards or the Shootout in one tap.
+- Coming-soon cabinets lost their "Phase 3" chip (build jargon on a Bodie-facing screen, rule 8). The marquee reads "TITLE" then "COMING SOON" on its own line.
+- `npm run typecheck` runs `next typegen` first so it passes on a fresh clone; before, it failed on the generated `LayoutProps` type until a build had run.
+- Two smoke tests added: the home doors point at the two wing routes, and the cabinet row carries no phase labels.
+- Still open from the review: verify airplane mode on a real iPhone for second-level routes (chunks are cached on first fetch, not precached), and the light-theme jump when the Shootout opens from the dark Arcade (resolves with the GameModule port).
+
 ### 2026-11-02: Phase 1 shell (first cut)
 
 - Repo scaffolded with Next.js 16 (App Router, TypeScript), **static export** (`output: 'export'`) so the same `out/` deploys to Vercel or GitHub Pages today and wraps in Capacitor in Phase 5. GitHub Pages needs a base path; `NEXT_PUBLIC_BASE_PATH` handles it and the workflow sets it.
