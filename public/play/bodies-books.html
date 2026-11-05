@@ -285,6 +285,14 @@ button:focus-visible,.w:focus-visible{outline:3px solid var(--accent);outline-of
 @media (max-height:560px){.fhead{height:48px;padding-top:10px}.face::before{top:48px}.acts button{height:56px}.fword{font-size:clamp(48px,14vh,96px)}}
 @media (prefers-reduced-motion: reduce){.fcard .flip{transition:none}.cheer{animation:none}}
 </style>
+<style>
+/* Level 3 reader: a few sentences a page, so the picture gives up a little height and the type steps down one notch. */
+#reader.l3 .txt{align-items:flex-start}
+#reader.l3 .txt p{font:500 clamp(19px,4.8vw,28px)/1.5 var(--body);max-width:34ch;text-wrap:pretty;margin:auto 0}
+#reader.l3 .art{width:min(100%,calc(30vh * 400 / 260))}
+/* Six tabs no longer fit one row on an iPhone; let them wrap instead of clipping "Guide". */
+@media (max-width:430px){.tabs{flex-wrap:wrap;border-radius:24px}.tab{flex:1 1 auto}}
+</style>
 </head>
 <body>
 
@@ -298,6 +306,7 @@ button:focus-visible,.w:focus-visible{outline:3px solid var(--accent);outline-of
     <div class="tabs" role="tablist" aria-label="Book shelves">
       <button class="tab" role="tab" id="tab-l1" data-tab="l1" aria-selected="true">Level 1</button>
       <button class="tab" role="tab" id="tab-l2" data-tab="l2" aria-selected="false">Level 2</button>
+      <button class="tab" role="tab" id="tab-l3" data-tab="l3" aria-selected="false">Level 3</button>
       <button class="tab" role="tab" id="tab-game" data-tab="game" aria-selected="false">Shootout</button>
       <button class="tab" role="tab" id="tab-cards" data-tab="cards" aria-selected="false">Cards</button>
       <button class="tab" role="tab" id="tab-guide" data-tab="guide" aria-selected="false">Guide</button>
@@ -1196,6 +1205,72 @@ var LEVEL2=L2SRC.map(function(r){
   return {id:r[0],title:r[1],level:2,color:src.color,words:r[3],cover:src.cover,
     pages:r[4].map(function(t,i){var sp=src.pages[Math.min(i,src.pages.length-1)];return {t:t,alt:sp.alt,art:function(){return sp.art.call(sp)}}})};
 });
+var LEVEL3=[];
+/* ---- content/books/_l3-kit.js ---- */
+/* Shared helpers for the Level 3 books (content/books/l3-*.js). Loaded first (the underscore sorts
+   it ahead of the books). Everything here builds on the legacy art kit (A.*, person, B, D, mix)
+   and returns SVG strings for a 400 x 260 scene. Nothing in here touches the page. */
+var L3={};
+L3.coach=function(x,y,o){return person(x,y,mix({s:1.25,jersey:'#243454',cap:'#e2422b',num:'',pose:'wave'},o||{}))};
+L3.ref=function(x,y,o){return person(x,y,mix({jersey:'#fff',sleeve:'#fff',stripes:1,helmet:'#111',skates:1,num:'',pose:'wave'},o||{}))};
+L3.kid=function(x,y,o){return person(x,y,mix({s:.82,jersey:'#f6b73c',hair:'#222',num:''},o||{}))};
+L3.wolf=function(x,y,o){return person(x,y,mix({jersey:'#6b7278',stripe:'#111',helmet:'#111',skates:1,num:'',hair:'#222'},o||{}))};
+L3.sea=function(x,y,o){return person(x,y,mix({jersey:'#0b2545',stripe:'#8fd3f4',sleeve:'#0b2545',num:'',hair:'#222'},o||{}))};
+L3.vis=function(x,y,o){return person(x,y,mix({jersey:'#6a3fb5',stripe:'#fff',sleeve:'#6a3fb5',num:'',hair:'#5a3a1e'},o||{}))};
+L3.goalieB=function(x,y,o){return B(x,y,mix(mix(RED,{pads:1,num:'',s:1.08}),o||{}))};
+L3.winSis=function(x,y,o){return sis(x,y,mix({jersey:'#6a3fb5',pants:'#243454',cap:'#6a3fb5',pom:1,pigtails:0},o||{}))};
+
+/* Props */
+L3.dark=function(op){return '<rect width="400" height="260" fill="#0f1f3d" opacity="'+(op||.6)+'"/>'};
+L3.fog=function(op){op=op||.55;return '<rect width="400" height="260" fill="#eef3f6" opacity="'+op+'"/><ellipse cx="80" cy="120" rx="140" ry="40" fill="#fff" opacity=".35"/><ellipse cx="300" cy="90" rx="160" ry="36" fill="#fff" opacity=".3"/><ellipse cx="200" cy="200" rx="220" ry="34" fill="#fff" opacity=".3"/>'};
+L3.candle=function(x,y,h){h=h||26;return '<rect x="'+(x-5)+'" y="'+(y-h)+'" width="10" height="'+h+'" rx="2" fill="#fff4c2" stroke="#d9c58a" stroke-width="1"/><path d="M'+x+','+(y-h-2)+' q-6,-9 0,-18 q6,9 0,18z" fill="#ff9e2a"/><path d="M'+x+','+(y-h-4)+' q-3,-5 0,-10 q3,5 0,10z" fill="#ffd34d"/><circle cx="'+x+'" cy="'+(y-h-10)+'" r="22" fill="#ffd34d" opacity=".12"/>'};
+L3.glow=function(x,y,r,c){return '<circle cx="'+x+'" cy="'+y+'" r="'+r+'" fill="'+(c||'#ffd34d')+'" opacity=".16"/><circle cx="'+x+'" cy="'+y+'" r="'+(r*.6)+'" fill="'+(c||'#ffd34d')+'" opacity=".14"/>'};
+L3.flashlight=function(x,y,ang){return '<g transform="translate('+x+','+y+') rotate('+(ang||0)+')"><rect x="-6" y="-30" width="12" height="30" rx="3" fill="#333"/><rect x="-9" y="-36" width="18" height="8" rx="2" fill="#555"/></g>'};
+L3.beam=function(x,y,ang,len,w){len=len||150;w=w||70;return '<g transform="translate('+x+','+y+') rotate('+(ang||0)+')"><polygon points="-6,0 6,0 '+w+',-'+len+' -'+w+',-'+len+'" fill="#ffd34d" opacity=".28"/><polygon points="-3,0 3,0 '+(w*.5)+',-'+len+' -'+(w*.5)+',-'+len+'" fill="#fff4c2" opacity=".25"/></g>'};
+L3.lightning=function(x,y,s){return '<polygon transform="translate('+x+','+y+') scale('+(s||1)+')" points="0,0 -10,26 -2,26 -12,56 14,18 4,18 12,0" fill="#ffd34d" stroke="#fff" stroke-width="1.5"/>'};
+L3.window=function(x,y,w,h,inner){return '<rect x="'+(x-w/2-6)+'" y="'+(y-h/2-6)+'" width="'+(w+12)+'" height="'+(h+12)+'" rx="4" fill="#8a6a40"/><rect x="'+(x-w/2)+'" y="'+(y-h/2)+'" width="'+w+'" height="'+h+'" fill="#0f1f3d"/><g transform="translate('+(x-w/2)+','+(y-h/2)+')">'+(inner||'')+'</g><path d="M'+x+','+(y-h/2)+' V'+(y+h/2)+' M'+(x-w/2)+','+y+' H'+(x+w/2)+'" stroke="#8a6a40" stroke-width="4"/>'};
+L3.cards=function(x,y){var s='';[[-30,0,-14],[-10,-4,-4],[10,-4,6],[30,0,16]].forEach(function(c){s+='<rect x="'+(x+c[0]-10)+'" y="'+(y+c[1]-14)+'" width="20" height="28" rx="3" fill="#fff" stroke="#999" stroke-width="1.2" transform="rotate('+c[2]+' '+(x+c[0])+' '+(y+c[1])+')"/>'});return s+'<text x="'+(x-30)+'" y="'+(y+5)+'" text-anchor="middle" font-size="12" font-weight="700" fill="#e2422b" font-family="'+FONT+'">5</text><text x="'+(x+30)+'" y="'+(y+5)+'" text-anchor="middle" font-size="12" font-weight="700" fill="#152338" font-family="'+FONT+'">K</text>'};
+L3.blanket=function(x,y,w,h,c){return '<path d="M'+(x-w/2)+','+y+' q'+(w*.25)+',-'+(h*.6)+' '+(w*.5)+',0 q'+(w*.25)+',-'+(h*.6)+' '+(w*.5)+',0 V'+(y+h)+' H'+(x-w/2)+'Z" fill="'+(c||'#c9a0dc')+'"/><path d="M'+(x-w/2+10)+','+(y+h*.5)+' H'+(x+w/2-10)+'" stroke="#fff" stroke-width="3" opacity=".5"/>'};
+L3.stove=function(x,y){return '<rect x="'+(x-26)+'" y="'+(y-14)+'" width="52" height="14" rx="3" fill="#2f8f57"/><rect x="'+(x-20)+'" y="'+(y-18)+'" width="40" height="4" fill="#333"/><path d="M'+(x-10)+','+(y-18)+' q-5,-8 0,-14 q5,8 0,14z M'+(x+8)+','+(y-18)+' q-5,-8 0,-14 q5,8 0,14z" fill="#2f9fd1"/>'};
+L3.fridge=function(x,y){return '<rect x="'+(x-34)+'" y="'+(y-150)+'" width="68" height="150" rx="6" fill="#e6ebef" stroke="#8a97a6" stroke-width="2"/><path d="M'+(x-34)+','+(y-100)+' H'+(x+34)+'" stroke="#8a97a6" stroke-width="2"/><rect x="'+(x+18)+'" y="'+(y-130)+'" width="5" height="20" rx="2" fill="#8a97a6"/><rect x="'+(x+18)+'" y="'+(y-86)+'" width="5" height="34" rx="2" fill="#8a97a6"/>'};
+L3.clockText=function(x,y,t,c){return '<rect x="'+(x-40)+'" y="'+(y-20)+'" width="80" height="40" rx="8" fill="#1b1b1b" stroke="#444" stroke-width="3"/><text x="'+x+'" y="'+(y+9)+'" text-anchor="middle" font-size="22" font-weight="700" fill="'+(c||'#ffd34d')+'" font-family="'+FONT+'">'+t+'</text>'};
+L3.shovel=function(x,y,ang){return '<g transform="translate('+x+','+y+') rotate('+(ang||0)+')"><rect x="-3" y="-90" width="6" height="70" rx="2" fill="#a0744a"/><rect x="-9" y="-96" width="18" height="8" rx="3" fill="#7a4f27"/><path d="M-16,-20 H16 V6 Q16,16 0,18 Q-16,16 -16,6Z" fill="#8a97a6" stroke="#5c6670" stroke-width="2"/></g>'};
+L3.boot=function(x,y,c){return '<path d="M'+(x-10)+','+(y-26)+' h16 v16 h12 q6,0 6,6 v4 h-34z" fill="'+(c||'#243454')+'"/><rect x="'+(x-12)+'" y="'+(y-30)+'" width="20" height="6" rx="2" fill="#fff" opacity=".9"/>'};
+L3.ice=function(y,c){y=y||170;return '<rect y="'+y+'" width="400" height="'+(260-y)+'" fill="'+(c||'#cfe6f5')+'"/><path d="M40,'+(y+30)+' l60,18 M250,'+(y+50)+' l50,-14 M140,'+(y+70)+' l40,10" stroke="#fff" stroke-width="2" opacity=".8"/>'};
+L3.bank=function(y){return '<path d="M0,'+y+' q60,-26 120,0 q60,-22 120,0 q60,-26 160,0 V'+(y+14)+' H0Z" fill="#f4f8fb"/><path d="M0,'+(y+2)+' q60,-26 120,0 q60,-22 120,0 q60,-26 160,0" stroke="#c9dbe6" stroke-width="2" fill="none"/>'};
+L3.snowpile=function(x,y,w){return '<ellipse cx="'+x+'" cy="'+y+'" rx="'+(w/2)+'" ry="'+(w/5)+'" fill="#fff"/><ellipse cx="'+x+'" cy="'+y+'" rx="'+(w/2)+'" ry="'+(w/5)+'" fill="none" stroke="#c9dbe6" stroke-width="2"/>'};
+L3.breath=function(x,y){return '<ellipse cx="'+(x+14)+'" cy="'+(y-8)+'" rx="8" ry="5" fill="#fff" opacity=".8"/><ellipse cx="'+(x+26)+'" cy="'+(y-14)+'" rx="6" ry="4" fill="#fff" opacity=".6"/>'};
+L3.headlights=function(x,y){return '<polygon points="'+x+','+(y-6)+' '+x+','+(y+6)+' 400,'+(y+90)+' 400,'+(y-70)+'" fill="#ffd34d" opacity=".22"/><circle cx="'+x+'" cy="'+y+'" r="7" fill="#fff4c2"/>'};
+L3.cabin=function(){return '<rect width="400" height="260" fill="#5a3a22"/><path d="M0,40 H400 M0,80 H400 M0,120 H400 M0,160 H400" stroke="#4a2a12" stroke-width="2"/><rect y="200" width="400" height="60" fill="#8a6a40"/><path d="M0,215 H400 M0,230 H400 M0,245 H400" stroke="#6f5230" stroke-width="1.5"/>'};
+L3.hearth=function(x,y){return '<rect x="'+(x-70)+'" y="'+(y-110)+'" width="140" height="110" fill="#8a7a6a" stroke="#5c5048" stroke-width="3"/><rect x="'+(x-50)+'" y="'+(y-80)+'" width="100" height="80" fill="#2b1d12"/>'+A.fire(x,y-6,.7)};
+L3.thunder=function(x,y,ang,len){len=len||52;var r=ang*Math.PI/180,ex=x-Math.sin(r)*len,ey=y+Math.cos(r)*len;return '<g transform="translate('+x+','+y+') rotate('+ang+')"><rect x="-3" y="0" width="6" height="'+len+'" rx="2" fill="#c8102e"/><rect x="-3" y="'+(len*.35)+'" width="6" height="4" fill="#fff"/><rect x="-3" y="'+(len*.5)+'" width="6" height="4" fill="#fff"/></g><path d="M'+(ex-4).toFixed(1)+','+(ey-3).toFixed(1)+' h26 a6,6 0 0 1 0,10 h-26 z" fill="#1b1b1b"/><path d="M'+(ex+2).toFixed(1)+','+(ey-3).toFixed(1)+' h6 v10 h-6z M'+(ex+12).toFixed(1)+','+(ey-3).toFixed(1)+' h6 v10 h-6z" fill="#fff" opacity=".9"/>'};
+L3.brokenThunder=function(x,y){return '<g transform="translate('+x+','+y+') rotate(-70)"><rect x="-3" y="0" width="6" height="30" rx="2" fill="#c8102e"/><rect x="-3" y="12" width="6" height="4" fill="#fff"/></g><g transform="translate('+(x+40)+','+(y-4)+') rotate(20)"><rect x="-3" y="0" width="6" height="26" rx="2" fill="#c8102e"/></g><path d="M'+(x+30)+','+(y+22)+' h26 a6,6 0 0 1 0,10 h-26z" fill="#1b1b1b"/><path d="M'+(x+8)+','+(y-8)+' l-6,-10 M'+(x+28)+','+(y-10)+' l6,-10 M'+(x+18)+','+(y-14)+' v-12" stroke="#f3c52b" stroke-width="3" stroke-linecap="round"/>'};
+L3.gloveBig=function(x,y){return '<path d="M'+(x-18)+','+(y)+' q-6,-22 8,-28 l4,-16 q4,-6 8,0 l0,14 l4,-18 q4,-6 8,0 l-1,20 l6,-14 q4,-5 7,1 l-4,20 q14,2 12,16 q-2,16 -20,20 q-20,4 -32,-8z" fill="#c8102e" stroke="#7a1f1f" stroke-width="2"/>'};
+L3.towel=function(x,y,ang){return '<g transform="translate('+x+','+y+') rotate('+(ang||0)+')"><rect x="-26" y="-9" width="52" height="18" rx="4" fill="#8fd3f4" stroke="#0b2545" stroke-width="2"/><path d="M-20,-4 H20 M-20,4 H20" stroke="#0b2545" stroke-width="2"/></g>'};
+L3.mic=function(x,y){return '<rect x="'+(x-3)+'" y="'+(y-24)+'" width="6" height="24" rx="2" fill="#333"/><circle cx="'+x+'" cy="'+(y-30)+'" r="8" fill="#555"/>'};
+L3.box=function(x,y){return '<rect x="'+(x-28)+'" y="'+(y-26)+'" width="56" height="26" rx="4" fill="#2e9c4f" stroke="#145a2a" stroke-width="2"/><rect x="'+(x-28)+'" y="'+(y-30)+'" width="56" height="8" rx="3" fill="#145a2a"/><rect x="'+(x-6)+'" y="'+(y-34)+'" width="12" height="6" rx="2" fill="#333"/><path d="M'+(x-20)+','+(y-12)+' h10 M'+(x-4)+','+(y-12)+' h10 M'+(x+12)+','+(y-12)+' h8" stroke="#ffd34d" stroke-width="3" stroke-linecap="round"/>'};
+L3.gull=function(x,y,s){return '<g transform="translate('+x+','+y+') scale('+(s||1)+')"><ellipse cx="0" cy="0" rx="14" ry="7" fill="#fff" stroke="#bbb" stroke-width="1"/><circle cx="12" cy="-6" r="6" fill="#fff" stroke="#bbb" stroke-width="1"/><path d="M17,-6 l7,2 -7,2z" fill="#f6b73c"/><circle cx="13" cy="-7" r="1.3" fill="#111"/><path d="M-4,7 v6 M4,7 v6" stroke="#f6b73c" stroke-width="2"/></g>'};
+L3.rock=function(x,y,w,h){return '<ellipse cx="'+x+'" cy="'+y+'" rx="'+w+'" ry="'+h+'" fill="#5c6670"/><ellipse cx="'+(x-w*.3)+'" cy="'+(y-h*.3)+'" rx="'+(w*.4)+'" ry="'+(h*.35)+'" fill="#7a8591"/>'};
+L3.pennant=function(x,y,h){h=h||70;return '<rect x="'+(x-2)+'" y="'+(y-h)+'" width="4" height="'+h+'" fill="#7a4f27"/><polygon points="'+(x+2)+','+(y-h)+' '+(x+40)+','+(y-h+10)+' '+(x+2)+','+(y-h+20)+'" fill="#e2422b"/>'};
+L3.rope=function(x1,y1,x2,y2){return '<path d="M'+x1+','+y1+' Q'+((x1+x2)/2)+','+(Math.max(y1,y2)+10)+' '+x2+','+y2+'" stroke="#d9c58a" stroke-width="3" fill="none" stroke-linecap="round"/>'};
+L3.bowl=function(x,y){return '<path d="M'+(x-22)+','+y+' q22,22 44,0z" fill="#fff" stroke="#bbb" stroke-width="2"/><ellipse cx="'+x+'" cy="'+y+'" rx="22" ry="6" fill="#f6d57a"/>'};
+L3.phone=function(x,y,ang){return '<rect x="'+(x-7)+'" y="'+(y-12)+'" width="14" height="24" rx="3" fill="#222" transform="rotate('+(ang||0)+' '+x+' '+y+')"/>'};
+L3.stars=function(seed,n){var s='';var r=seed||7;for(var i=0;i<(n||80);i++){r=(r*9301+49297)%233280;var x=(r/233280)*400;r=(r*9301+49297)%233280;var y=(r/233280)*150;r=(r*9301+49297)%233280;var rad=.8+(r/233280)*1.6;s+='<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+rad.toFixed(1)+'" fill="#fff"/>'}return s};
+L3.milky=function(){return '<path d="M-20,120 Q120,20 420,40 L420,80 Q140,70 -20,160Z" fill="#fff" opacity=".12"/><path d="M-20,110 Q120,40 420,55 L420,70 Q140,60 -20,140Z" fill="#fff" opacity=".1"/>'};
+L3.dipper=function(x,y,s){s=s||1;var p=[[0,0],[26,6],[50,0],[72,-14],[100,-22],[128,-10],[118,22]];var out='';for(var i=0;i<p.length;i++){var a=p[i];out+='<circle cx="'+(x+a[0]*s)+'" cy="'+(y+a[1]*s)+'" r="'+(3*s)+'" fill="#fff"/>';if(i)out+='<line x1="'+(x+p[i-1][0]*s)+'" y1="'+(y+p[i-1][1]*s)+'" x2="'+(x+a[0]*s)+'" y2="'+(y+a[1]*s)+'" stroke="#fff" stroke-width="1.2" opacity=".6"/>'}out+='<line x1="'+(x+p[6][0]*s)+'" y1="'+(y+p[6][1]*s)+'" x2="'+(x+p[3][0]*s)+'" y2="'+(y+p[3][1]*s)+'" stroke="#fff" stroke-width="1.2" opacity=".6"/>';return out};
+L3.northStar=function(x,y){return A.star(x,y,9,'#fff')+'<circle cx="'+x+'" cy="'+y+'" r="16" fill="#fff" opacity=".18"/>'};
+L3.shooting=function(x,y,len){return '<line x1="'+x+'" y1="'+y+'" x2="'+(x-len)+'" y2="'+(y+len*.45)+'" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".8"/><circle cx="'+x+'" cy="'+y+'" r="2.5" fill="#fff"/>'};
+L3.aurora=function(big){var s='<path d="M-20,120 Q60,40 140,110 T300,90 T420,120 V'+(big?170:150)+' Q300,'+(big?120:130)+' 200,'+(big?150:140)+' T-20,'+(big?170:150)+'Z" fill="#58e070" opacity=".32"/><path d="M-20,100 Q80,30 160,90 T330,70 T420,100 V130 Q300,100 200,120 T-20,130Z" fill="#7ef0a0" opacity=".22"/>';if(big)s+='<path d="M-20,70 Q100,0 200,60 T420,50 V90 Q300,60 200,90 T-20,100Z" fill="#b07cf5" opacity=".28"/>';return s};
+L3.treeline=function(y){var s='';for(var x=-10;x<420;x+=34)s+='<polygon points="'+x+','+y+' '+(x+17)+','+(y-40-((x/34)%3)*10)+' '+(x+34)+','+y+'" fill="#0a1628"/>';return s};
+L3.wallOf=function(n,x,y){var s='';for(var i=0;i<n;i++)s+=orange(x+i*34,y,{s:.9,pose:'stand',num:''});return s};
+L3.flower=function(x,y,c){return '<rect x="'+(x-1.5)+'" y="'+(y-18)+'" width="3" height="18" fill="#2f8f57"/><circle cx="'+x+'" cy="'+(y-22)+'" r="6" fill="'+(c||'#ff6a52')+'"/><circle cx="'+x+'" cy="'+(y-22)+'" r="2.5" fill="#ffd34d"/>'};
+L3.targetStar=function(x,y){return '<circle cx="'+x+'" cy="'+y+'" r="12" fill="none" stroke="#ffd34d" stroke-width="3" opacity=".9"/><circle cx="'+x+'" cy="'+y+'" r="4" fill="#ffd34d"/>'};
+L3.whistle=function(x,y){return '<circle cx="'+x+'" cy="'+y+'" r="6" fill="#333"/><rect x="'+(x+4)+'" y="'+(y-3)+'" width="12" height="6" rx="2" fill="#333"/>'};
+L3.mallet=function(x,y,ang){return '<g transform="translate('+x+','+y+') rotate('+(ang||0)+')"><rect x="-2" y="-40" width="4" height="40" fill="#a0744a"/><rect x="-10" y="-52" width="20" height="14" rx="3" fill="#333"/></g>'};
+L3.peg=function(x,y){return '<rect x="'+(x-2)+'" y="'+(y-16)+'" width="4" height="16" fill="#f6b73c"/>'};
+L3.dirtRoad=function(){return '<rect y="190" width="400" height="70" fill="#a3843a"/><path d="M0,215 q100,-6 200,0 t200,0 M0,240 q100,6 200,0 t200,0" stroke="#8a6a2a" stroke-width="3" fill="none"/>'};
+L3.waterNight=function(y){return A.water(y||170,'#13294a','#2a4a7a')};
+L3.basket=function(){return A.hoop(310,128,250)};
 
 /* ---- content/books/jets-comeback.js ---- */
 /* The Big Comeback. Winnipeg Jets 5, Montreal Canadiens 4 (OT), Bell Centre, November 3, 2026.
@@ -1272,7 +1347,490 @@ LEVEL2.push({id:'comeback',title:'The Big Comeback',level:2,color:'#041e42',
  ]});
 })();
 
-var ALL=BOOKS.concat(LEVEL2);
+/* ---- content/books/l3-01-goalie.js ---- */
+/* Level 3: Goalie for a Day. Bodie fills in for the sick goalie. */
+(function(){
+var ROOM='#f3e9d8';
+var flame=function(x,y,o){return person(x,y,mix(RED,mix({num:'7'},o||{})))};
+var blue=function(x,y,o){return person(x,y,mix(BLUE,mix({num:'9'},o||{})))};
+var G=L3.goalieB;
+var rinkNet=function(){return A.rink()+A.net(290,238,1.1)};
+var scoreboard=function(h,a){return A.board(200,56,h,a)};
+
+LEVEL3.push({id:'goalie',title:'Goalie for a Day',level:3,color:'#c8102e',
+ words:['goalie','hurt','sure','finally','almost','better','special','myself','keep','hold','together','period'],
+ cover:function(){return A.svg(SKY,'Bodie in big goalie pads standing in front of the net',rinkNet()+A.star(90,100,10)+A.star(200,70,12)+A.star(330,100,9)+G(255,240,{pose:'out',face:'grin',s:1.2})+L3.gloveBig(214,150))},
+ pages:[
+  {t:"On Saturday morning, Dad got a text from Coach. Our goalie was sick. \"Somebody has to play in net today,\" Dad said. I looked at my cereal. Then I looked at Dad.",
+   alt:"Bodie at the kitchen table with a bowl of cereal while Dad reads a text on his phone",
+   art:function(){return A.svg(ROOM,this.alt,A.room()+B(130,228,{legs:'none',face:'wow'})+A.table(170,200,220)+L3.bowl(130,194)+D(320,240,{pose:'hold'})+L3.phone(300,176,-20))}},
+  {t:"\"I'll do it,\" I said. I had never been a goalie before. But somebody had to, and I was not scared. Well, maybe I was a little scared.",
+   alt:"Bodie with his hand up, volunteering, while Dad looks surprised",
+   art:function(){return A.svg(ROOM,this.alt,A.room()+A.lamp(60,200)+B(160,240,{pose:'wave',face:'wow'})+D(290,240,{pose:'hold',face:'wow'}))}},
+  {t:"At the rink, Coach gave me the goalie pads. They were huge! The pads went all the way up to my chest. The glove was so big that my hand got lost inside it.",
+   alt:"Coach hands Bodie giant goalie pads and a glove at the rink",
+   art:function(){return A.svg(SKY,this.alt,A.rink()+A.helmetBench(330,236)+L3.coach(100,240,{pose:'out'})+G(230,240,{pose:'out',face:'wow',s:1.1})+L3.gloveBig(300,170))}},
+  {t:"I tried to skate to the net. The pads made my legs feel heavy and slow. I fell down twice. My sister laughed, but then she helped me up.",
+   alt:"Bodie in goalie pads fallen on the ice while his sister reaches down to help",
+   art:function(){return A.svg(SKY,this.alt,rinkNet()+G(110,236,{pose:'out',face:'sad',rot:78})+sis(260,240,{pose:'out',face:'grin',skates:1})+A.motion(60,170,2))}},
+  {t:"The game started. The first shot came fast and low. I did not move in time. The puck slid right between my pads and into the net. 1 to 0 for the blue team.",
+   alt:"The scoreboard shows Flames 0, Blue 1, and the puck is in the net behind Bodie",
+   art:function(){return A.svg(SKY,this.alt,rinkNet()+scoreboard(0,1)+A.puck(330,232)+G(255,240,{pose:'out',face:'sad'})+blue(110,240,{pose:'up',face:'grin'}))}},
+  {t:"I wanted to hide inside my big helmet. Then Coach tapped the glass. \"Shake it off, Bodie. Goalies have to keep going. The next one is yours.\"",
+   alt:"Coach taps the glass and talks to Bodie, who looks sad in his goalie gear",
+   art:function(){return A.svg(SKY,this.alt,A.rink()+'<rect x="20" y="40" width="130" height="200" fill="#dfeaf2" opacity=".5" stroke="#aab7c4" stroke-width="3"/>'+L3.coach(85,240,{pose:'wave'})+G(240,240,{pose:'out',face:'sad'}))}},
+  {t:"The next shot was high. I reached up with the giant glove and the puck stuck in it. A save! My team banged their sticks on the boards.",
+   alt:"Bodie catches the puck in his big glove and his teammates cheer",
+   art:function(){return A.svg(SKY,this.alt,rinkNet()+A.star(120,90,10)+A.star(200,60,12)+G(255,240,{pose:'up',face:'grin'})+L3.gloveBig(214,110)+A.puck(226,118)+flame(90,240,{pose:'up',face:'grin'})+A.stick(60,150,-20,70))}},
+  {t:"After that, I stopped being scared. I watched the puck like a hawk. I made a pad save. I made a stick save. One shot even bounced off my helmet. Still no goal.",
+   alt:"Pucks fly at Bodie from every direction and he stops them all",
+   art:function(){return A.svg(SKY,this.alt,rinkNet()+G(255,240,{pose:'out',face:'grin'})+A.puck(200,150)+A.puck(170,210)+A.puck(215,236)+A.motion(120,140,3)+A.motion(110,200,2)+blue(70,240,{pose:'hold',legs:'skate'})+A.stick(70,198,-35,52))}},
+  {t:"In the second period, our team scored. Then we scored again. Now it was 2 to 1. The blue team got mad. They kept shooting, and I kept stopping it.",
+   alt:"The scoreboard shows Flames 2, Blue 1, and two Flames players celebrate",
+   art:function(){return A.svg(SKY,this.alt,A.rink()+scoreboard(2,1)+flame(120,240,{pose:'up',face:'grin'})+flame(230,240,{num:'11',pose:'up',face:'grin'})+G(340,240,{pose:'up',face:'grin',s:.95}))}},
+  {t:"With one minute left, a blue player broke in all alone. He faked left. I did not go for it. He shot right, and I slid across and stopped it with my pad.",
+   alt:"Bodie slides across the crease and stops a shot with his pad",
+   art:function(){return A.svg(SKY,this.alt,rinkNet()+L3.clockText(200,50,'1:00')+blue(120,240,{pose:'hold',legs:'skate'})+A.stick(120,198,-35,52)+A.motion(170,232,2)+A.puck(228,238)+G(258,246,{pose:'out',rot:24}))}},
+  {t:"The buzzer went. We won 2 to 1! My whole team piled on top of me. I could not see anything, but I could hear everybody yelling my name.",
+   alt:"The whole team piles on top of Bodie in front of the net",
+   art:function(){return A.svg(SKY,this.alt,rinkNet()+scoreboard(2,1)+A.star(60,120,10)+A.star(340,110,10)+flame(130,240,{pose:'up',face:'grin',s:.95})+flame(300,240,{num:'11',pose:'up',face:'grin',s:.95})+flame(180,230,{num:'3',pose:'out',face:'grin',rot:-30})+G(225,240,{pose:'ears',face:'grin'})+flame(265,232,{num:'8',pose:'out',face:'grin',rot:28}))}},
+  {t:"In the car, Dad said, \"You were a real goalie today.\" I smiled. \"Being a goalie was fun,\" I said. \"But I still like scoring goals better.\"",
+   alt:"Dad's car drives home down the road with the sun out",
+   art:function(){return A.svg(SKY,this.alt,A.prairie()+A.road(200)+A.car(200,228,'#c8102e')+A.sign(60,160,'HOME','#c8102e'))}}
+ ]});
+})();
+
+/* ---- content/books/l3-02-fog.js ---- */
+/* Level 3: Fog on the Lake. An early paddle, a wall of fog, and the sound of the flag on the dock. */
+(function(){
+var lake=function(sunX){return (sunX?A.sun(sunX,46):'')+A.cloud(110,50,.8)+A.tree(30,134,.55)+A.tree(372,134,.6)+A.water(130)};
+var paddlers=function(bo,doo){return B(160,240,mix(LJ,bo||{}))+D(250,247,mix(LD,doo||{}))+A.canoe(205,215,.9)};
+var canoeIn=function(bo,doo,extra,fogOp){return lake()+(extra||'')+paddlers(bo,doo)+(fogOp?L3.fog(fogOp):'')};
+var dockFar=function(){return A.dock(250,164,150)+L3.pennant(386,164,60)};
+
+LEVEL3.push({id:'fog',title:'Fog on the Lake',level:3,color:'#2f6fb5',
+ words:['early','quiet','through','toward','heard','between','until','careful','slowly','sure','together','world'],
+ cover:function(){return A.svg('#dfe8ef','Bodie and Dad in a canoe in thick fog, with a flag on a dock just showing through',canoeIn({face:'wow'},{},dockFar(),.5))},
+ pages:[
+  {t:"Dad woke me up when it was still dark. \"The fish bite early,\" he whispered. We carried the canoe down to the water. The lake was flat and quiet, like glass.",
+   alt:"Bodie and Dad carry the canoe to the lake in the dark before sunrise",
+   art:function(){return A.svg('#2b3a5c',this.alt,A.moon(340,50,16)+L3.stars(3,30)+A.tree(30,134,.55)+A.tree(372,134,.6)+A.water(140,'#1f3a5f','#3b5f8a')+B(130,240,{pose:'up',jersey:'#ff7a1a',vest:1})+D(290,240,{pose:'up',jersey:'#ff7a1a',vest:1})+A.canoe(210,100,.9))}},
+  {t:"We paddled out past the point. I caught a perch right away. Then Dad caught a pickerel. The sun came up orange behind the trees.",
+   alt:"The sun rises orange as Bodie holds up a perch in the canoe",
+   art:function(){return A.svg('#ffb27a',this.alt,'<rect width="400" height="70" fill="#ffc89a"/>'+A.sun(200,110,22)+A.tree(30,134,.55)+A.tree(372,134,.6)+A.water(130)+B(160,240,mix(LJ,{pose:'up',face:'grin'}))+A.fish(150,140,.5)+D(250,247,mix(LD,{rodHTML:''}))+A.rod(262,190,-30,70,1)+A.canoe(205,215,.9))}},
+  {t:"Then the fog came. It rolled across the water like a big white blanket. First the trees went away. Then the dock went away. Then I could not see the shore at all.",
+   alt:"Fog rolls over the lake and hides the trees and the dock",
+   art:function(){return A.svg('#dfe8ef',this.alt,canoeIn({face:'wow'},{face:'wow'},dockFar(),.62))}},
+  {t:"\"Dad,\" I said, \"which way is home?\" Dad looked around. \"I'm not sure,\" he said. \"But we will figure it out together.\" His voice was calm, so I felt calm too.",
+   alt:"Bodie and Dad sit in the canoe surrounded by white fog",
+   art:function(){return A.svg('#dfe8ef',this.alt,canoeIn({face:'wow'},{pose:'wave'},'',.7))}},
+  {t:"Dad said the first rule of fog is to stop and listen. We sat still. Water dripped off the paddles. Far away, a loon called. Then I heard something else.",
+   alt:"A loon calls somewhere in the fog while Bodie and Dad sit still",
+   art:function(){return A.svg('#dfe8ef',this.alt,canoeIn({},{},A.loon(70,170,.6)+A.sound(100,160),.62)+A.sound(330,120,-1))}},
+  {t:"It was a flag. Our flag at the end of the dock snaps in the wind. \"I hear it!\" I said. Dad grinned. \"Then that is the way home.\"",
+   alt:"Bodie points into the fog toward the sound of the flag",
+   art:function(){return A.svg('#dfe8ef',this.alt,canoeIn({pose:'wave',face:'grin'},{face:'grin'},L3.pennant(380,150,60)+A.sound(340,110,-1),.6))}},
+  {t:"We paddled slowly toward the sound. I sat in the front and watched for rocks. The fog was so thick that drops of water stuck to my eyelashes.",
+   alt:"Bodie leans forward watching for rocks as the canoe moves slowly through the fog",
+   art:function(){return A.svg('#dfe8ef',this.alt,canoeIn({rot:-8,face:'wow'},{},L3.rock(70,215,22,9)+L3.rock(330,235,16,7)+A.ripple(120,232,.8),.62))}},
+  {t:"A dark shape came out of the fog. I held my breath. It was only a big rock, with a gull standing on top. The gull looked at us and flew away.",
+   alt:"A big rock with a gull on top appears out of the fog beside the canoe",
+   art:function(){return A.svg('#dfe8ef',this.alt,lake()+L3.rock(95,205,42,22)+paddlers({face:'wow'},{})+L3.fog(.5)+L3.gull(95,180,1.1))}},
+  {t:"Dad counted our paddle strokes out loud. Ten, twenty, thirty. The flag got louder. Then, through the fog, I saw a line of wood. The dock!",
+   alt:"The dock and its flag come into view through thinning fog",
+   art:function(){return A.svg('#e8eef3',this.alt,lake()+dockFar()+paddlers({pose:'wave',face:'grin'},{})+L3.fog(.35))}},
+  {t:"I jumped out and tied the rope to the post. My hands were shaking a little. Dad put his hand on my head. \"Good eyes, Bodie. You got us home.\"",
+   alt:"Bodie stands on the dock tying the canoe rope while Dad sits in the canoe",
+   art:function(){return A.svg('#e8eef3',this.alt,lake()+A.dock(200,164,200)+L3.pennant(386,164,60)+B(300,164,{pose:'hold',jersey:'#ff7a1a',vest:1,face:'grin'})+L3.rope(296,190,220,214)+D(180,247,mix(LD,{pose:'wave',face:'grin'}))+A.canoe(140,215,.9)+L3.fog(.2))}},
+  {t:"By the time we ate breakfast, the fog was gone. The lake was blue and the sun was warm. It was like the fog had never been there at all.",
+   alt:"Bodie and Dad sit on the dock in the sun eating breakfast",
+   art:function(){return A.svg(SKY,this.alt,lake(340)+A.dock(120,170,260)+B(190,200,{legs:'none',pose:'hold',face:'grin',jersey:'#ff7a1a'})+A.plate(190,166)+D(300,206,{legs:'none',pose:'hold',face:'grin'})+A.mug(312,140))}},
+  {t:"Now I know the first rule of fog. Stop. Listen. Go slow. And I know that when you are with Dad, you are never really lost.",
+   alt:"Bodie and Dad standing by the lake with the canoe, both smiling",
+   art:function(){return A.svg(SKY,this.alt,lake(340)+A.grass(220,'#6cc04a')+A.canoe(90,236,.8)+B(220,240,{pose:'up',face:'grin',jersey:'#ff7a1a',vest:1,s:1.1})+D(320,240,{pose:'wave',face:'grin',jersey:'#ff7a1a',vest:1}))}}
+ ]});
+})();
+
+/* ---- content/books/l3-03-lights.js ---- */
+/* Level 3: The Night the Lights Went Out. A storm, a flashlight, candles, cards and a new family night. */
+(function(){
+var ROOM='#f3e9d8';
+var win=function(x,y,bolt){return L3.window(x,y,90,70,bolt?L3.lightning(45,8,.6):'')};
+var tv=function(){return A.tv(200,140,'<rect width="400" height="260" fill="#111"/>')};
+var kitchen=function(){return A.room()+L3.fridge(60,200)};
+var tableSet=function(){return A.table(200,196,240)+L3.candle(120,188)+L3.candle(160,188,20)+L3.candle(200,188,30)+L3.candle(240,188,22)+L3.candle(280,188)};
+var three=function(bo,so,doo){return B(120,230,mix({legs:'none'},bo||{}))+sis(200,230,mix({legs:'none'},so||{}))+D(290,236,mix({legs:'none'},doo||{}))};
+
+LEVEL3.push({id:'lights',title:'The Night the Lights Went Out',level:3,color:'#3b2b86',
+ words:['during','light','whole','warm','only','people','minute','laugh','different','enough','flashlight','thunder'],
+ cover:function(){return A.svg('#2a2250','Bodie, his sister and Dad around a table of candles in the dark',A.room()+L3.dark(.55)+three({face:'grin'},{face:'grin'},{face:'grin'})+tableSet()+L3.glow(200,150,90))},
+ pages:[
+  {t:"It was raining so hard that the windows shook. Thunder boomed over the house. Then, in the middle of my show, the TV went black. Every light in the house went out.",
+   alt:"Lightning flashes in the window as the TV goes black and Bodie jumps",
+   art:function(){return A.svg(ROOM,this.alt,A.room()+win(70,90,true)+tv()+A.lamp(340,200)+B(300,240,{pose:'up',face:'wow'})+L3.dark(.35))}},
+  {t:"\"Power's out,\" Dad called from the kitchen. My sister screamed, and then she laughed. It was so dark I could not see my own hands.",
+   alt:"The room is almost black; Bodie and his sister are just shapes in the dark",
+   art:function(){return A.svg(ROOM,this.alt,A.room()+B(140,240,{pose:'out',face:'wow'})+sis(260,240,{pose:'ears',face:'grin'})+L3.dark(.78))}},
+  {t:"Dad found the flashlight in the drawer. He clicked it on and made a big circle of light on the ceiling. \"Okay,\" he said. \"Who wants to have a different kind of night?\"",
+   alt:"Dad shines a flashlight up at the ceiling while Bodie and his sister watch",
+   art:function(){return A.svg(ROOM,this.alt,A.room()+L3.dark(.6)+L3.beam(292,150,0,150,80)+'<ellipse cx="292" cy="6" rx="90" ry="12" fill="#fff4c2" opacity=".5"/>'+D(290,240,{pose:'up',face:'grin'})+L3.flashlight(260,160,-15)+B(110,240,{face:'wow'})+sis(190,240,{face:'wow'}))}},
+  {t:"We put every candle in the house on the kitchen table. Dad made hot chocolate on the camp stove. The whole kitchen smelled like chocolate and smoke.",
+   alt:"Candles cover the kitchen table and Dad stirs hot chocolate on a camp stove",
+   art:function(){return A.svg(ROOM,this.alt,kitchen()+L3.dark(.5)+D(330,240,{pose:'hold'})+L3.stove(330,190)+B(120,240,{face:'grin'})+sis(205,240,{face:'grin'})+tableSet()+A.mug(300,166)+L3.glow(200,150,90))}},
+  {t:"We played cards by candlelight. My sister won the first game. I won the second game. Dad said he let us win, but I do not think that is true.",
+   alt:"Cards are spread on the table between the candles, and Bodie's sister has her arms up",
+   art:function(){return A.svg(ROOM,this.alt,A.room()+L3.dark(.5)+three({face:'grin'},{pose:'up',face:'grin'},{face:'sad'})+tableSet()+L3.cards(200,170)+L3.glow(200,150,90))}},
+  {t:"Then Dad said, \"Story time.\" He held the flashlight under his chin and made a spooky face. The story was about a moose who wanted to play hockey. It was not spooky at all.",
+   alt:"Dad holds a flashlight under his chin while Bodie and his sister laugh",
+   art:function(){return A.svg(ROOM,this.alt,A.room()+L3.dark(.65)+D(270,240,{pose:'hold',face:'wow'})+L3.flashlight(270,150,180)+L3.glow(270,120,40,'#ffd34d')+'<circle cx="270" cy="120" r="24" fill="#ffd34d" opacity=".25"/>'+B(100,240,{pose:'ears',face:'grin'})+sis(170,240,{pose:'ears',face:'grin'}))}},
+  {t:"I got to read a whole chapter of my book out loud by flashlight. I only got stuck on two words. Dad helped me with those, and then I kept going.",
+   alt:"Bodie reads a book by flashlight while Dad sits beside him",
+   art:function(){return A.svg(ROOM,this.alt,A.room()+A.couch(200,240,260)+L3.dark(.6)+L3.beam(290,112,248,150,46)+D(280,236,{legs:'none',pose:'hold',face:'grin'})+L3.flashlight(292,112,248)+B(140,230,{legs:'none',pose:'hold',face:'grin'})+A.book(140,170,.7)+L3.glow(140,180,60))}},
+  {t:"We looked out the window. The whole street was dark. Every house was dark. The only light was the lightning, way off over the fields.",
+   alt:"Dark houses on a dark street, with lightning far away on the horizon",
+   art:function(){return A.svg('#0f1f3d',this.alt,A.night()+'<rect x="20" y="120" width="90" height="80" fill="#152238"/><polygon points="12,120 118,120 65,88" fill="#1b2a44"/><rect x="150" y="110" width="100" height="90" fill="#152238"/><polygon points="142,110 258,110 200,74" fill="#1b2a44"/><rect x="290" y="125" width="90" height="75" fill="#152238"/><polygon points="282,125 388,125 335,92" fill="#1b2a44"/><rect y="200" width="400" height="60" fill="#1b2a44"/>'+L3.lightning(360,30,.7)+L3.lightning(40,44,.5))}},
+  {t:"We made a big bed of blankets on the living room floor. All three of us slept there, warm and close. The rain tapped on the roof until I fell asleep.",
+   alt:"Bodie, his sister and Dad tucked under a big blanket on the floor",
+   art:function(){return A.svg(ROOM,this.alt,A.room()+L3.dark(.55)+B(110,236,{legs:'none',face:'grin'})+sis(200,236,{legs:'none',face:'grin'})+D(300,242,{legs:'none',face:'grin'})+L3.blanket(200,216,340,44,'#c9a0dc')+L3.candle(40,200,18)+L3.glow(40,170,36))}},
+  {t:"In the morning, the fridge hummed. The clock on the stove blinked. The lights were back. My sister cheered. I was a little bit sad.",
+   alt:"The kitchen is bright again; the stove clock blinks and Bodie's sister cheers",
+   art:function(){return A.svg(ROOM,this.alt,kitchen()+A.lamp(340,200)+L3.clockText(200,60,'12:00','#58e070')+sis(230,240,{pose:'up',face:'grin'})+B(130,240,{face:'sad'}))}},
+  {t:"\"Dad,\" I said, \"can we have a dark night again? Even when the power is on?\" Dad thought about it for a minute. \"Deal,\" he said. \"Saturday.\"",
+   alt:"Bodie asks Dad a question and Dad holds out his hand for a deal",
+   art:function(){return A.svg(ROOM,this.alt,A.room()+A.couch(200,240,260)+B(150,240,{pose:'wave',face:'grin'})+D(270,240,{pose:'out',face:'grin'})+A.sign(340,120,'SAT','#3b2b86'))}},
+  {t:"Now we do a dark night once a month. No TV, no phones, only candles and cards and stories. It is my favourite night of the whole month.",
+   alt:"The family around the candle-lit table again, playing cards and laughing",
+   art:function(){return A.svg(ROOM,this.alt,A.room()+L3.dark(.55)+three({face:'grin',pose:'hold'},{face:'grin',pose:'hold'},{face:'grin',pose:'hold'})+tableSet()+L3.cards(200,170)+A.book(70,120,.5)+L3.glow(200,150,90))}}
+ ]});
+})();
+
+/* ---- content/books/l3-04-buzzer.js ---- */
+/* Level 3: Buzzer Beater. A Sea Bears game, a halftime free throw, and a shot at the buzzer. */
+(function(){
+var NAVY='#0b2545';
+var court=function(){return A.court()};
+var board=function(h,a){return A.board2(200,56,'SEA BEARS','VISITOR',h,a,'#8fd3f4','#c9a0dc')};
+var hoop=function(){return A.hoop(310,150,250)};
+var fans=function(bo,doo){return B(150,108,mix({legs:'none',s:.78,jersey:NAVY,stripe:'#8fd3f4'},bo||{}))+D(230,112,mix({legs:'none',s:.95,jersey:NAVY},doo||{}))};
+var seaB=function(x,y,o){return B(x,y,mix({jersey:NAVY,stripe:'#8fd3f4',num:'5'},o||{}))};
+var seaD=function(x,y,o){return D(x,y,mix({jersey:NAVY},o||{}))};
+var micMan=function(x,y,o){return person(x,y,mix({jersey:'#333',sleeve:'#333',num:'',hair:'#888',pose:'wave'},o||{}))+L3.mic(x-30,y-50)};
+
+LEVEL3.push({id:'buzzer',title:'Buzzer Beater',level:3,color:NAVY,
+ words:['second','half','between','almost','people','important','really','finally','group','show','start','ten'],
+ cover:function(){return A.svg(NAVY,'A Sea Bears player jumps and shoots as the ball flies toward the hoop',court()+hoop()+L3.clockText(70,60,'0:01')+L3.sea(170,224,{pose:'up',legs:'none'})+A.arc(190,120,250,60,310,140)+A.basketball(300,112,13)+A.star(120,90,9))},
+ pages:[
+  {t:"The Sea Bears were playing at home. Dad got us seats right behind the basket. The people in front of us had drums. Every time the Sea Bears scored, they banged them.",
+   alt:"Bodie and Dad in their seats behind the basket, next to fans with drums",
+   art:function(){return A.svg(NAVY,this.alt,court()+fans({face:'grin'},{})+A.drums(330,112,.55)+hoop()+L3.sea(120,240,{pose:'hold'})+A.basketball(150,232,14))}},
+  {t:"Basketball is fast. The ball went up the court, down the court, up the court. I tried to keep my eyes on it. By halftime my neck was tired.",
+   alt:"Players race up the court with the ball while Bodie watches from the stands",
+   art:function(){return A.svg(NAVY,this.alt,court()+fans({face:'wow'},{})+A.motion(40,180,3)+L3.sea(140,240,{pose:'hold',legs:'kick',rot:-8})+A.basketball(180,236,14)+L3.vis(260,240,{pose:'out',legs:'kick',rot:6})+A.motion(300,180,2))}},
+  {t:"At halftime, a man with a microphone picked kids to shoot free throws. He pointed right at me! I ran down the steps as fast as I could.",
+   alt:"A man with a microphone points at Bodie, who is running down to the court",
+   art:function(){return A.svg(NAVY,this.alt,court()+seaD(90,112,{legs:'none',s:.95,pose:'up',face:'grin'})+micMan(300,240,{pose:'wave'})+seaB(160,240,{legs:'kick',rot:-10,pose:'out',face:'grin'})+A.motion(80,200,3))}},
+  {t:"The basket looked so high from the free throw line. I bounced the ball twice, like the players do. Then I shot it. It bounced on the rim, rolled around, and dropped in!",
+   alt:"Bodie shoots a free throw and the ball drops through the hoop",
+   art:function(){return A.svg(NAVY,this.alt,court()+hoop()+seaB(130,240,{pose:'up',face:'wow'})+A.arc(150,130,230,70,310,142)+A.basketball(310,162,13)+A.star(250,100,8))}},
+  {t:"The whole arena cheered for me. The man gave me a Sea Bears towel. I waved it over my head all the way back to my seat.",
+   alt:"Bodie waves a Sea Bears towel over his head while the crowd cheers",
+   art:function(){return A.svg(NAVY,this.alt,court()+A.star(60,130,10)+A.star(340,120,10)+A.star(200,100,8)+seaB(200,240,{pose:'up',face:'grin',s:1.1})+L3.towel(236,118,-30)+micMan(320,240,{pose:'up',face:'grin'}))}},
+  {t:"The second half was close. The other team went up by two. Then the Sea Bears went up by one. The crowd got louder and louder.",
+   alt:"The scoreboard shows Sea Bears 61, Visitor 60, as the players battle",
+   art:function(){return A.svg(NAVY,this.alt,court()+board(61,60)+L3.sea(140,240,{pose:'hold',legs:'kick'})+A.basketball(176,236,14)+L3.vis(250,240,{pose:'out'})+A.star(60,130,8)+A.star(340,130,8))}},
+  {t:"With ten seconds left, the other team scored. Now the Sea Bears were down by two. Dad grabbed my arm. \"Watch this,\" he said. \"This is the important part.\"",
+   alt:"The clock shows ten seconds and the scoreboard shows the Sea Bears down by two",
+   art:function(){return A.svg(NAVY,this.alt,court()+board(70,72)+L3.clockText(340,56,'0:10')+seaB(140,240,{face:'wow'})+seaD(250,240,{pose:'out',face:'wow'}))}},
+  {t:"The Sea Bears got the ball. Five seconds. Four. The point guard dribbled between two players. Three. Two. He jumped and let it fly from way outside.",
+   alt:"The point guard jumps and shoots over two defenders with two seconds left",
+   art:function(){return A.svg(NAVY,this.alt,court()+L3.clockText(70,60,'0:02')+L3.vis(100,240,{pose:'up'})+L3.vis(260,240,{pose:'up',hair:'#222'})+L3.sea(180,206,{pose:'up',legs:'none'})+A.basketball(222,96,13)+A.motion(250,110,2)+A.motion(150,222,2))}},
+  {t:"The ball was in the air when the buzzer went. It seemed to hang there forever. Then it dropped through the net without touching the rim. Swish.",
+   alt:"The ball drops through the hoop as the clock shows zero",
+   art:function(){return A.svg(NAVY,this.alt,court()+hoop()+L3.clockText(70,60,'0:00','#ff6b6b')+A.arc(180,120,250,50,310,140)+A.basketball(310,166,13)+A.star(280,90,9)+A.star(340,100,7)+L3.sea(170,240,{pose:'up',face:'wow'}))}},
+  {t:"The Sea Bears won by one! Everybody jumped up at the same time. The drums banged. I waved my towel so hard it flew out of my hand.",
+   alt:"The scoreboard shows Sea Bears 73, Visitor 72, and Bodie's towel flies through the air",
+   art:function(){return A.svg(NAVY,this.alt,court()+board(73,72)+A.star(40,120,9)+A.star(360,120,9)+seaB(150,240,{pose:'up',face:'grin'})+L3.towel(90,110,40)+seaD(260,240,{pose:'up',face:'grin'})+A.drums(360,236,.5))}},
+  {t:"On the way out, the point guard was signing things by the door. I showed him my towel. He signed it and said, \"Nice free throw, kid.\" He saw me!",
+   alt:"The point guard signs Bodie's towel by the arena door",
+   art:function(){return A.svg('#1b2a44',this.alt,'<rect y="200" width="400" height="60" fill="#2a3d5e"/><rect x="300" y="60" width="80" height="140" fill="#152238" stroke="#8a97a6" stroke-width="3"/>'+L3.sea(230,240,{pose:'hold',face:'grin',s:1.15})+seaB(120,240,{pose:'out',face:'grin'})+L3.towel(170,180,0)+seaD(40,240,{pose:'hold',face:'grin',s:1.1}))}},
+  {t:"The towel is on my wall now. Every time I see it, I think about the ball hanging in the air. Dad was right. That was the important part.",
+   alt:"The signed Sea Bears towel pinned on Bodie's bedroom wall",
+   art:function(){return A.svg('#f3e9d8',this.alt,A.room()+'<rect x="120" y="60" width="160" height="60" rx="4" fill="#8fd3f4" stroke="#0b2545" stroke-width="3"/><path d="M135,80 H265 M135,100 H265" stroke="#0b2545" stroke-width="3"/><path d="M230,74 q10,8 20,0 q6,-4 12,6" stroke="#152338" stroke-width="2" fill="none"/>'+A.basketball(330,236,16)+seaB(200,240,{pose:'up',face:'grin'}))}}
+ ]});
+})();
+
+/* ---- content/books/l3-05-derby.js ---- */
+/* Level 3: The Fishing Derby. Bodie wants the trophy, and ends up helping a smaller kid land the big one. */
+(function(){
+var shore=function(){return A.sun(60,46)+A.cloud(300,44,.8)+A.tree(30,134,.55)+A.tree(372,134,.6)+A.water(150)};
+var dock=function(){return A.dock(110,166,280)};
+var scene=function(inner){return shore()+dock()+inner};
+var kid=function(x,y,o){return L3.kid(x,y,mix({jersey:'#f6b73c'},o||{}))};
+var stage=function(){return A.sun(60,46)+A.cloud(340,40,.6)+A.grass(190)+'<rect x="60" y="150" width="280" height="50" rx="4" fill="#a0744a"/><rect x="60" y="146" width="280" height="8" fill="#7a4f27"/>'+A.bannerTxt(200,46,'FISHING DERBY','#2e9c4f')};
+
+LEVEL3.push({id:'derby',title:'The Fishing Derby',level:3,color:'#2e9c4f',
+ words:['early','small','carry','full','kind','together','special','question','piece','half','patient','tackle'],
+ cover:function(){return A.svg(SKY,'Bodie and a small boy hold one bent fishing rod together on the dock as a huge fish jumps',scene(B(200,166,{pose:'hold',face:'wow'})+kid(260,166,{pose:'hold',face:'wow'})+A.rod(214,120,-50,70,1)+A.fish(330,140,1.2,{jump:1})+A.splash(330,160,1)))},
+ pages:[
+  {t:"The fishing derby started at eight. Dad and I got to the dock early to pick the best spot. We picked the end of the dock, where the water is deep and dark.",
+   alt:"Bodie and Dad walk out to the end of the dock with their rods in the early sun",
+   art:function(){return A.svg(SKY,this.alt,scene(A.sign(340,120,'DERBY','#2e9c4f')+B(240,166,{pose:'hold',face:'grin'})+A.rod(240,124,-35,60,0)+D(150,166,{pose:'hold'})+A.rod(156,116,-35,70,0)+A.pail(90,166,0)))}},
+  {t:"The rules were simple. Whoever caught the biggest fish won the trophy. I really wanted that trophy. It was gold and almost as tall as my sister.",
+   alt:"A tall gold trophy on a table, with Bodie's sister standing beside it for size",
+   art:function(){return A.svg(SKY,this.alt,A.sun(60,46)+A.cloud(300,44,.7)+A.grass(190)+A.table(200,200,120)+A.trophy(200,194,1.5)+sis(300,240,{pose:'wave',face:'grin'})+B(100,240,{face:'wow',pose:'hold'}))}},
+  {t:"I cast my line and waited. And waited. Everybody around me was catching fish. All I caught was a piece of weed. Dad said, \"Be patient. Your fish is coming.\"",
+   alt:"Bodie's line pulls up a clump of weed while a fisher beside him lifts a fish",
+   art:function(){return A.svg(SKY,this.alt,scene(B(170,166,{pose:'hold',face:'sad'})+A.rod(176,120,-40,66,1)+'<path d="M232,150 q-8,20 4,30 q-14,6 -6,20" stroke="#2f8f57" stroke-width="5" fill="none" stroke-linecap="round"/>'+friend(330,166,{pose:'up',face:'grin'})+A.fish(330,110,.6)+D(70,166,{pose:'wave'})))}},
+  {t:"Next to me was a small boy with a brand new rod. He did not know how to cast. His line kept getting tangled. His face got redder and redder.",
+   alt:"A small boy on the dock with a tangled fishing line and a frustrated face",
+   art:function(){return A.svg(SKY,this.alt,scene(kid(290,166,{pose:'hold',face:'sad'})+A.rod(296,128,-20,56,0)+'<path d="M300,120 q20,10 0,20 q-20,10 10,20 q20,8 -4,16" stroke="#d9c58a" stroke-width="2" fill="none"/>'+B(160,166,{pose:'hold'})+A.rod(166,120,-35,66,0)))}},
+  {t:"I thought about my trophy. Then I put my own rod down. \"Want some help?\" I asked. The boy nodded. His name was Theo, and it was his first time fishing.",
+   alt:"Bodie puts his rod down on the dock and waves to the small boy",
+   art:function(){return A.svg(SKY,this.alt,scene(A.rod(150,166,-85,70,0)+B(200,166,{pose:'wave',face:'grin'})+kid(290,166,{pose:'wave'})+D(70,166,{pose:'hold'})))}},
+  {t:"I showed Theo how to hold the rod and flip the bail. I showed him how to cast without hooking anybody. Dad watched us and smiled, but he did not say anything.",
+   alt:"Bodie helps Theo hold the rod the right way while Dad watches and smiles",
+   art:function(){return A.svg(SKY,this.alt,scene(B(230,166,{pose:'out',face:'grin'})+kid(290,166,{pose:'hold'})+A.rod(296,128,-35,56,0)+D(90,166,{pose:'hold',face:'grin'})))}},
+  {t:"Theo's third cast was perfect. The bobber landed far out. One minute later, it went under. \"Pull up!\" I yelled. Theo pulled up, and the rod bent in half.",
+   alt:"Theo's rod bends in half as the bobber disappears under the water",
+   art:function(){return A.svg(SKY,this.alt,scene(kid(290,166,{pose:'hold',face:'wow',rot:-10})+A.rod(296,128,-60,60,2)+A.splash(360,200,.8)+B(210,166,{pose:'up',face:'wow'})))}},
+  {t:"The fish was huge. Theo could not hold the rod by himself, so we held it together. We reeled and reeled. Dad scooped it with the net. A giant pickerel!",
+   alt:"Bodie and Theo hold the rod together while Dad scoops a giant pickerel with the net",
+   art:function(){return A.svg(SKY,this.alt,scene(B(220,166,{pose:'hold',face:'wow'})+kid(270,166,{pose:'hold',face:'wow'})+A.rod(232,120,-55,70,2)+D(120,166,{pose:'hold'})+A.fnet(132,120,-40)+A.fish(345,195,1.3,{jump:1})+A.splash(345,215,1)))}},
+  {t:"Theo's pickerel was the biggest fish of the whole derby. He got to carry the trophy up on the stage. He was so happy he forgot to say anything.",
+   alt:"Theo holds the big gold trophy on the stage while the crowd claps",
+   art:function(){return A.svg(SKY,this.alt,stage()+kid(190,172,{pose:'out',face:'grin'})+A.trophy(250,172,.85)+B(90,240,{pose:'up',face:'grin'})+D(310,240,{pose:'up',face:'grin'})+A.star(40,100,8)+A.star(360,90,8))}},
+  {t:"I caught one small perch that day. It was not even close to the biggest. But the man with the microphone called my name anyway.",
+   alt:"Bodie holds up a very small perch while a man with a microphone calls his name",
+   art:function(){return A.svg(SKY,this.alt,stage()+B(130,240,{pose:'up',face:'wow'})+A.fish(120,130,.45)+person(270,172,{jersey:'#333',sleeve:'#333',num:'',hair:'#888',pose:'wave'})+L3.mic(240,122))}},
+  {t:"\"This year we have a special prize,\" he said. \"For the best helper on the dock.\" It was a new tackle box, full of lures. Theo clapped the loudest.",
+   alt:"Bodie on the stage holding a green tackle box while Theo claps",
+   art:function(){return A.svg(SKY,this.alt,stage()+B(200,172,{pose:'hold',face:'grin'})+L3.box(200,150)+kid(90,240,{pose:'up',face:'grin'})+D(310,240,{pose:'up',face:'grin'})+A.star(60,100,8)+A.star(340,90,8)+A.star(200,40,10))}},
+  {t:"On the way home I asked Dad a question. \"Would you rather win the trophy or the tackle box?\" Dad thought about it. \"The tackle box,\" he said. \"Every time.\"",
+   alt:"Dad's car drives home past the lake with the tackle box in the back window",
+   art:function(){return A.svg(SKY,this.alt,A.prairie()+A.water(150,'#2f9fd1')+A.road(200)+A.car(200,228,'#2e9c4f')+L3.box(236,212))}}
+ ]});
+})();
+
+/* ---- content/books/l3-06-freekick.js ---- */
+/* Level 3: The Free Kick. A week of practice in the yard, one kick over the net, and one that bends in. */
+(function(){
+var greenB=function(x,y,o){return B(x,y,mix(GRN,o||{}))};
+var goal=function(){return A.goal(250,240,1)};
+var wall=function(x){return L3.wallOf(4,x||140,240)};
+var keeper=function(o){return orange(330,240,mix({pose:'out',num:''},o||{}))};
+var ball=function(x,y){return A.ball(x,y,13)};
+var field=function(){return pitch()};
+var home=function(){return yard()+'<rect x="300" y="110" width="100" height="90" fill="#e6ebef" stroke="#8a97a6" stroke-width="3"/><path d="M300,140 H400 M300,170 H400" stroke="#8a97a6" stroke-width="3"/>'};
+
+LEVEL3.push({id:'freekick',title:'The Free Kick',level:3,color:'#4fae4f',
+ words:['practice','above','over','almost','different','keep','learn','second','sure','today','finally','own'],
+ cover:function(){return A.svg(SKY,'Bodie bends a free kick over a wall of orange players and into the net',field()+goal()+wall(140)+keeper()+greenB(70,240,{legs:'kick',pose:'out',face:'grin'})+A.arc(100,230,200,90,322,180)+ball(318,184))},
+ pages:[
+  {t:"Messi can bend a free kick over the wall and into the corner. I watched him do it on TV ten times. \"I am going to learn that,\" I told Dad.",
+   alt:"Bodie and Dad watch a soccer free kick on TV",
+   art:function(){return A.svg('#f3e9d8',this.alt,tvRoom(field()+goal()+L3.wallOf(3,150,240)+A.arc(80,230,200,80,322,180)+ball(318,184))+greenB(58,240,{pose:'wave',face:'wow'})+D(348,240,{pose:'hold'}))}},
+  {t:"Every day after school, I practiced in the yard. Dad stood in front of me with his arms up, like a wall. I kicked the ball over him again and again.",
+   alt:"Dad stands in the yard with his arms up as Bodie kicks the ball over his head",
+   art:function(){return A.svg(SKY,this.alt,home()+A.goal(290,240,.8)+D(220,240,{pose:'up'})+greenB(90,240,{legs:'kick',pose:'out'})+A.arc(110,230,210,70,330,200)+ball(150,236))}},
+  {t:"At first, the ball went over the fence. Then it went into the garden. Then it hit the garage door. Dad said, \"Different is good. Keep going.\"",
+   alt:"The ball flies over the fence while flowers lie squashed in the garden",
+   art:function(){return A.svg(SKY,this.alt,home()+L3.flower(40,236)+L3.flower(60,240,'#ffd34d')+L3.flower(80,236,'#c9a0dc')+ball(50,228)+A.arc(120,230,200,60,330,120)+ball(340,120)+greenB(130,240,{pose:'ears',face:'wow'})+D(250,240,{pose:'wave',face:'grin'}))}},
+  {t:"By Thursday, I could bend it a little. By Friday, I could bend it a lot. The ball went up, over Dad's head, and curled down into the corner of the net.",
+   alt:"The ball curls over Dad and into the corner of the yard net",
+   art:function(){return A.svg(SKY,this.alt,home()+A.goal(290,240,.8)+D(210,240,{pose:'up',face:'wow'})+greenB(90,240,{pose:'up',face:'grin'})+A.arc(110,230,220,60,352,190)+ball(350,192)+A.star(120,100,8))}},
+  {t:"Saturday was game day. Our team was green. The other team was orange. In the first half, nobody scored. Then an orange player tripped me right outside the box.",
+   alt:"Bodie is tripped by an orange player outside the box",
+   art:function(){return A.svg(SKY,this.alt,field()+goal()+greenB(100,246,{pose:'out',face:'wow',rot:70})+orange(250,240,{legs:'kick',pose:'out',face:'grin'})+ball(60,236)+L3.ref(60,240,{pose:'wave',skates:0}))}},
+  {t:"Free kick! Coach pointed at me. \"This is your kick, Bodie.\" Four orange players made a wall. The goalie bounced up and down. My heart bounced too.",
+   alt:"Four orange players stand in a wall in front of the net as Bodie lines up his kick",
+   art:function(){return A.svg(SKY,this.alt,field()+goal()+wall(140)+keeper({face:'grin'})+greenB(80,240,{pose:'hold',face:'wow'})+ball(110,236)+L3.coach(30,240,{pose:'wave',s:1.1,skates:0}))}},
+  {t:"I took three steps back. I ran up and kicked it just like I practiced. The ball went over the wall, over the goalie, and over the net. Way over.",
+   alt:"The ball sails high over the wall, the goalie and the net",
+   art:function(){return A.svg(SKY,this.alt,field()+goal()+wall(140)+keeper({pose:'up',face:'grin'})+greenB(80,240,{legs:'kick',pose:'out'})+A.arc(100,230,230,10,380,60)+ball(372,66)+A.motion(330,40,2))}},
+  {t:"The orange team laughed. I felt my face get hot. Coach clapped his hands. \"Good try,\" he said. \"You will get another one.\" I was not so sure.",
+   alt:"Orange players laugh while Coach claps for Bodie, who looks sad",
+   art:function(){return A.svg(SKY,this.alt,field()+orange(260,240,{pose:'ears',face:'grin',num:''})+orange(320,240,{pose:'ears',face:'grin',num:''})+greenB(140,240,{face:'sad'})+L3.coach(50,240,{pose:'up',s:1.1,skates:0,face:'grin'}))}},
+  {t:"In the second half, I got the ball and took it toward the net. The same orange player tripped me again. The ref blew the whistle. Free kick, same spot.",
+   alt:"The ref blows the whistle as Bodie is tripped again in the same spot",
+   art:function(){return A.svg(SKY,this.alt,field()+goal()+greenB(100,246,{pose:'out',face:'wow',rot:70})+orange(250,240,{legs:'kick',pose:'out',num:''})+ball(60,236)+L3.ref(60,240,{pose:'up',skates:0})+L3.whistle(50,150)+A.sound(70,140))}},
+  {t:"This time I did not look at the goalie. I did not look at the wall. I only looked at the corner of the net, and I kicked.",
+   alt:"Bodie stares at the top corner of the net, marked with a glowing target",
+   art:function(){return A.svg(SKY,this.alt,field()+goal()+wall(140)+keeper()+greenB(80,240,{pose:'hold'})+ball(110,236)+L3.targetStar(330,182))}},
+  {t:"The ball went up, bent around the wall, and dropped under the bar. The goalie did not even move. GOAL! My whole team ran at me.",
+   alt:"The ball bends around the wall and into the top corner as Bodie celebrates",
+   art:function(){return A.svg(SKY,this.alt,field()+goal()+wall(140)+keeper({face:'wow'})+greenB(80,240,{pose:'up',face:'grin'})+A.arc(100,230,200,90,322,180)+ball(318,184)+A.star(60,100,9)+A.star(140,70,10)+A.star(200,110,7))}},
+  {t:"We won 1 to 0. After the game, Dad said, \"That was a Messi kick.\" \"No,\" I said. \"That was a Bodie kick. I learned it in my own yard.\"",
+   alt:"The scoreboard shows Green 1, Orange 0, and Bodie and Dad celebrate",
+   art:function(){return A.svg(SKY,this.alt,A.cloud(340,44,.7)+A.grass(150,'#4fae4f')+'<path d="M0,190 H400 M0,235 H400" stroke="#fff" stroke-width="3" opacity=".6"/>'+A.board2(200,56,'GREEN','ORANGE',1,0,'#7ee27e','#ff9e4a')+greenB(150,240,{pose:'up',face:'grin'})+D(260,240,{pose:'up',face:'grin'})+ball(330,236))}}
+ ]});
+})();
+
+/* ---- content/books/l3-07-pond.js ---- */
+/* Level 3: Pond Hockey. Shovels, boots for goals, a game until dark, and hot chocolate after. */
+(function(){
+var day=function(){return A.winter()+L3.bank(170)+L3.ice(176)};
+var cabin=function(x){return '<rect x="'+(x-60)+'" y="90" width="120" height="70" fill="#7a4f27"/><polygon points="'+(x-70)+',90 '+(x+70)+',90 '+x+',50" fill="#5a3a22"/><rect x="'+(x-16)+'" y="120" width="32" height="40" fill="#3a2210"/><rect x="'+(x+22)+'" y="104" width="22" height="20" fill="#ffd34d"/><rect x="'+(x+30)+'" y="50" width="12" height="22" fill="#5c6670"/><ellipse cx="'+(x+36)+'" cy="44" rx="8" ry="5" fill="#fff" opacity=".8"/>'};
+var goal=function(x){return L3.boot(x-22,240)+L3.boot(x+28,240)};
+var sb=function(x,y,o){return snowB(x,y,mix({skates:1},o||{}))};
+var sd=function(x,y,o){return snowD(x,y,mix({skates:1},o||{}))};
+var kid1=function(x,y,o){return person(x,y,mix({jersey:'#2e9c4f',pants:'#243454',cap:'#2e9c4f',pom:1,num:'',skates:1,hair:'#222'},o||{}))};
+var kid2=function(x,y,o){return person(x,y,mix({jersey:'#6a3fb5',pants:'#243454',cap:'#6a3fb5',pom:1,num:'',skates:1,hair:'#d9a441'},o||{}))};
+var dad2=function(x,y,o){return person(x,y,mix({s:1.25,jersey:'#8a5a2a',pants:'#243454',cap:'#8a5a2a',pom:1,num:'',skates:1},o||{}))};
+var duskSky=function(){return '<rect width="400" height="260" fill="#ff9e6a"/><rect width="400" height="60" fill="#c9a0dc"/>'+A.sun(200,150,20)+L3.bank(170)+L3.ice(176,'#d8c6ee')};
+var nightIce=function(){return A.night()+L3.bank(170)+L3.ice(176,'#2a3d5e')};
+
+LEVEL3.push({id:'pond',title:'Pond Hockey',level:3,color:'#6fb7e8',
+ words:['clean','warm','long','hot','drink','light','until','early','whole','together','enough','carry'],
+ cover:function(){return A.svg('#dfeaf2','Bodie skating across the frozen lake with a stick and puck as the sun sets',duskSky()+goal(330)+A.motion(60,190,3)+sb(190,240,{pose:'hold',rot:-10,face:'grin'})+A.stick(202,194,-35,58)+A.puck(246,238))},
+ pages:[
+  {t:"It was so cold that my breath made clouds. The lake had been frozen for two weeks. Dad said the ice was finally thick enough. \"Grab your skates,\" he said. \"Pond hockey day.\"",
+   alt:"Bodie and Dad outside the cabin in the cold, Dad holding a pair of skates",
+   art:function(){return A.svg('#dfeaf2',this.alt,A.winter()+cabin(110)+A.tree(330,160,.9)+A.tree(370,160,.7)+sb(220,240,{pose:'up',face:'grin'})+L3.breath(228,160)+sd(320,240,{pose:'hold'})+A.skates(300,176))}},
+  {t:"We carried shovels, sticks and a bag of pucks down to the lake. The snow on the ice was deep. Dad and I shovelled a big rink. It took a long time.",
+   alt:"Bodie and Dad shovel a rink out of the deep snow on the frozen lake",
+   art:function(){return A.svg('#dfeaf2',this.alt,A.winter()+L3.bank(170)+'<rect y="176" width="400" height="84" fill="#f4f8fb"/>'+L3.ice(200)+L3.snowpile(60,236,90)+L3.snowpile(340,236,90)+sb(150,240,{pose:'hold',skates:0})+L3.shovel(166,230,25)+sd(280,240,{pose:'hold',skates:0})+L3.shovel(298,232,20)+A.bag(215,236))}},
+  {t:"When we were done, the ice was clean and shiny. Dad put two boots down for one goal. I put two boots down for the other. No nets, no lines, no refs.",
+   alt:"A clean rink on the lake with two pairs of boots as goals",
+   art:function(){return A.svg('#dfeaf2',this.alt,day()+goal(60)+goal(340)+sb(200,240,{pose:'wave',face:'grin'})+A.stick(130,176,-10,64)+A.puck(260,238))}},
+  {t:"My sister came down with her skates. Then two kids from the cabin next door came. Then their dad came. Now we had enough people for a real game.",
+   alt:"Bodie's sister, two neighbour kids and their dad arrive at the rink",
+   art:function(){return A.svg('#dfeaf2',this.alt,day()+goal(40)+sb(90,240,{pose:'wave',face:'grin'})+L3.winSis(160,240,{skates:1,pose:'wave',face:'grin'})+kid1(230,240,{pose:'hold'})+kid2(290,240,{pose:'wave'})+dad2(355,240,{pose:'hold'}))}},
+  {t:"Pond hockey has different rules. No lifting the puck, because the snow bank eats it. No slap shots. And if you score, you have to go get the puck yourself.",
+   alt:"A puck disappears into the snow bank while Bodie digs for it",
+   art:function(){return A.svg('#dfeaf2',this.alt,day()+L3.snowpile(330,180,120)+A.puck(326,172)+sb(250,240,{pose:'out',face:'wow',rot:-20})+A.stick(100,176,-10,64)+kid1(60,240,{pose:'ears',face:'grin'}))}},
+  {t:"The ice was bumpy in some spots. I hit a bump and fell flat on my belly. I slid all the way into the snow bank. Everybody laughed, and so did I.",
+   alt:"Bodie slides on his belly into the snow bank while the others laugh",
+   art:function(){return A.svg('#dfeaf2',this.alt,day()+L3.snowpile(330,236,110)+A.motion(150,220,3)+sb(230,236,{pose:'up',face:'grin',rot:85})+L3.winSis(100,240,{skates:1,pose:'ears',face:'grin'})+kid2(170,240,{pose:'ears',face:'grin'}))}},
+  {t:"We played and played. I scored three goals. My sister scored two. The dads played goalie and kept letting pucks in. I think they did it on purpose.",
+   alt:"Dad plays goalie between the boots and the puck slides right past him",
+   art:function(){return A.svg('#dfeaf2',this.alt,day()+goal(330)+sd(330,240,{pose:'out',face:'grin'})+A.puck(352,238)+A.motion(280,232,2)+sb(150,240,{pose:'up',face:'grin'})+A.stick(120,176,-10,64)+L3.winSis(230,240,{skates:1,pose:'up',face:'grin'})+A.star(200,90,9))}},
+  {t:"The sun went down early, the way it does in winter. The sky turned pink, then purple. The ice turned purple too. We kept playing in the light that was left.",
+   alt:"The sky and the ice turn purple as the sun sets and the game goes on",
+   art:function(){return A.svg('#ff9e6a',this.alt,duskSky()+goal(340)+sb(120,240,{pose:'hold',rot:-8})+A.stick(132,194,-35,58)+A.puck(176,238)+kid1(230,240,{pose:'hold'})+A.stick(230,198,-35,52)+dad2(340,240,{pose:'out'}))}},
+  {t:"Finally it got too dark to see the puck. Dad turned on the truck lights and pointed them at the ice. We played one more game in the headlights.",
+   alt:"The truck headlights light up the rink at night",
+   art:function(){return A.svg('#0f1f3d',this.alt,nightIce()+A.van(70,236,'#243454')+L3.headlights(150,206)+sb(250,240,{pose:'hold',rot:-8})+A.stick(262,194,-35,58)+A.puck(306,238)+kid2(340,240,{pose:'hold'}))}},
+  {t:"My toes were frozen. My cheeks were red. I did not want to stop. But Dad said, \"Last goal wins,\" and my sister scored it. Game over.",
+   alt:"Bodie's sister cheers after scoring the last goal in the dark",
+   art:function(){return A.svg('#0f1f3d',this.alt,nightIce()+L3.headlights(0,206)+goal(330)+A.puck(352,238)+L3.winSis(230,240,{skates:1,pose:'up',face:'grin'})+sb(120,240,{face:'sad',pose:'hold'})+A.moon(340,40,14))}},
+  {t:"Inside the cabin, Dad made hot chocolate with the little marshmallows. I held the warm mug with both hands. My toes started to tingle as they warmed up.",
+   alt:"Bodie holds a mug of hot chocolate by the fire inside the cabin",
+   art:function(){return A.svg('#5a3a22',this.alt,L3.cabin()+L3.hearth(300,200)+B(130,240,{pose:'hold',face:'grin',jersey:'#2f6fb5'})+A.mug(130,150)+D(220,240,{pose:'hold',face:'grin'})+A.mug(232,120)+L3.glow(300,170,70,'#ff9e2a'))}},
+  {t:"I fell asleep in front of the fire with my skates still beside me. The whole next day, all I wanted was to go back out on the ice.",
+   alt:"Bodie asleep under a blanket by the fire with his skates beside him",
+   art:function(){return A.svg('#5a3a22',this.alt,L3.cabin()+L3.hearth(300,200)+B(130,236,{legs:'none',jersey:'#2f6fb5'})+L3.blanket(130,216,150,40,'#e2422b')+A.skates(40,236)+L3.glow(300,170,70,'#ff9e2a'))}}
+ ]});
+})();
+
+/* ---- content/books/l3-08-stick.js ---- */
+/* Level 3: The Broken Stick. Thunder snaps in warm up, and Bodie finds out who was scoring all along. */
+(function(){
+var flame=function(x,y,o){return person(x,y,mix(RED,mix({num:'7'},o||{})))};
+var bod=function(x,y,o){return B(x,y,mix(RED,o||{}))};
+var wolf=L3.wolf;
+var board=function(h,a){return A.board2(200,56,'FLAMES','WOLVES',h,a,'#ff6a52','#c9d3dc')};
+var rinkNet=function(){return A.rink()+A.net(290,238,1.1)};
+var old=function(x,y,ang,len){return A.stick(x,y,ang,len||52)};
+var dressing=function(){return '<rect width="400" height="260" fill="#243454"/><rect y="200" width="400" height="60" fill="#8a97a6"/>'+A.bench(120,240,180)+A.bench(300,240,160)+A.helmetBench(60,210)+A.helmetBench(340,210)};
+
+LEVEL3.push({id:'stick',title:'The Broken Stick',level:3,color:'#d19a52',
+ words:['almost','different','sure','hold','better','finally','important','thought','whole','own','answer','spare'],
+ cover:function(){return A.svg(SKY,'Bodie holds two halves of his broken red stick on the ice',A.rink()+bod(200,240,{pose:'out',face:'wow',s:1.15})+L3.brokenThunder(150,150)+A.puck(300,238))},
+ pages:[
+  {t:"My stick was the best stick in the world. It was red and black with white tape. I had scored every goal this year with it. I named it Thunder.",
+   alt:"Bodie in the garage holding his red stick, Thunder, with a lightning bolt sign",
+   art:function(){return A.svg('#b9c3cc',this.alt,A.garage()+bod(170,240,{pose:'hold',face:'grin',skates:0})+L3.thunder(176,196,-30,56)+A.sign(320,170,'THUNDER','#c8102e')+L3.lightning(300,60,.6))}},
+  {t:"The big game was against the Wolves. They were in first place. We were in second. In warm up, I took a slap shot, and Thunder snapped in half.",
+   alt:"Thunder snaps in half in the middle of Bodie's slap shot",
+   art:function(){return A.svg(SKY,this.alt,rinkNet()+wolf(330,240,{pose:'hold',legs:'skate'})+bod(150,240,{pose:'hold',legs:'skate',rot:-12,face:'wow'})+L3.brokenThunder(205,205)+A.puck(212,238)+A.motion(80,200,2))}},
+  {t:"I stood there holding two pieces of stick. I could not believe it. My sister saw my face from the stands and put her hands over her mouth.",
+   alt:"Bodie holds the two pieces of his stick while his sister watches from the stands with her hands over her mouth",
+   art:function(){return A.svg(SKY,this.alt,A.rink()+sis(90,100,{legs:'none',s:.72,pose:'ears',face:'wow'})+bod(220,240,{pose:'out',face:'wow'})+L3.brokenThunder(150,185))}},
+  {t:"Coach came over. \"Grab the spare,\" he said. The spare was an old wooden stick from the back of the bench. It was heavy, and the blade was flat as a board.",
+   alt:"Coach hands Bodie an old wooden stick from the bench",
+   art:function(){return A.svg(SKY,this.alt,A.rink()+A.bench(330,240,120)+L3.coach(110,240,{pose:'out'})+old(150,150,-80,70)+bod(240,240,{pose:'hold',face:'wow'}))}},
+  {t:"The first period was bad. The puck kept bouncing off my blade. I missed a pass. I missed an open net. The Wolves scored twice. I was sure it was the stick.",
+   alt:"The scoreboard shows Flames 0, Wolves 2, and the puck bounces away from Bodie's stick",
+   art:function(){return A.svg(SKY,this.alt,rinkNet()+board(0,2)+bod(150,240,{pose:'hold',legs:'skate',face:'sad'})+old(150,198,-35)+A.puck(230,222)+A.motion(190,236,2)+wolf(320,240,{pose:'up',face:'grin'}))}},
+  {t:"On the bench, I told Coach the stick was no good. Coach looked at me for a long time. \"Bodie,\" he said, \"who scored all those goals this year? You, or Thunder?\"",
+   alt:"Coach crouches by the bench and talks to Bodie, who is holding the old stick",
+   art:function(){return A.svg(SKY,this.alt,A.rink()+'<rect y="150" width="400" height="110" fill="#dfeaf2"/>'+A.bench(200,240,320)+flame(90,230,{legs:'none',face:'sad'})+bod(200,230,{legs:'none',face:'sad'})+old(230,200,-10,50)+flame(310,230,{legs:'none',num:'11'})+L3.coach(360,240,{pose:'hold',s:1.15}))}},
+  {t:"I thought about it. The answer was me. Thunder never skated. Thunder never passed. Thunder never saw the open man. That was all me.",
+   alt:"Bodie thinks, with a thought bubble showing himself skating with the puck",
+   art:function(){return A.svg(SKY,this.alt,A.rink()+bod(140,240,{pose:'stand',face:'stand'})+'<ellipse cx="270" cy="110" rx="90" ry="60" fill="#fff" stroke="#aab7c4" stroke-width="3"/><circle cx="200" cy="170" r="9" fill="#fff" stroke="#aab7c4" stroke-width="3"/><circle cx="180" cy="190" r="5" fill="#fff" stroke="#aab7c4" stroke-width="2"/>'+bod(265,150,{s:.6,pose:'hold',legs:'skate',rot:-8,face:'grin'})+old(272,122,-35,34)+A.puck(296,150))}},
+  {t:"In the second period, I stopped thinking about the stick. I just played. I stole the puck. I passed to my friend, and he scored. 2 to 1.",
+   alt:"Bodie's friend scores as the scoreboard shows Flames 1, Wolves 2",
+   art:function(){return A.svg(SKY,this.alt,rinkNet()+board(1,2)+A.light(327,150)+A.puck(338,232)+flame(230,240,{pose:'up',face:'grin'})+bod(110,240,{pose:'hold',legs:'skate'})+old(110,198,-35))}},
+  {t:"Then I got the puck in the corner. I cut to the net. I faked the goalie and slid it under his pad with the old wooden stick. 2 to 2!",
+   alt:"Bodie slides the puck under the Wolves goalie's pad",
+   art:function(){return A.svg(SKY,this.alt,rinkNet()+board(2,2)+wolf(305,240,{pads:1,pose:'out',rot:14})+A.light(327,150)+A.puck(318,236)+bod(190,240,{pose:'hold',legs:'skate',rot:-14,face:'grin'})+old(202,194,-40,60)+A.motion(120,210,2))}},
+  {t:"With a minute left, the puck came to me at the blue line. I did not take a slap shot. I took a wrist shot, low and hard. It went in. 3 to 2!",
+   alt:"Bodie's wrist shot goes in as the scoreboard shows Flames 3, Wolves 2",
+   art:function(){return A.svg(SKY,this.alt,rinkNet()+board(3,2)+L3.clockText(350,106,'1:00')+A.light(327,150)+A.puck(338,232)+wolf(305,240,{pads:1,pose:'out'})+bod(140,240,{pose:'up',face:'grin'})+old(80,160,-20,70)+A.star(100,110,9)+A.star(200,90,10))}},
+  {t:"We beat the Wolves. In the dressing room, Coach handed me the old wooden stick. \"Keep it,\" he said. \"It seems to work for you.\" Everybody laughed.",
+   alt:"Coach hands Bodie the old stick in the dressing room while the team laughs",
+   art:function(){return A.svg('#243454',this.alt,dressing()+L3.coach(300,240,{pose:'out',s:1.15})+old(260,160,-60,70)+bod(180,240,{pose:'out',face:'grin',skates:0})+flame(90,240,{pose:'ears',face:'grin',skates:0})+flame(360,236,{legs:'none',num:'11',face:'grin'}))}},
+  {t:"Thunder is in the garage now, in two pieces. The old wooden stick is in my room. I still think it is heavy. But it is mine, and that is the important part.",
+   alt:"Bodie in his room holding the old wooden stick, with a hockey poster on the wall",
+   art:function(){return A.svg('#f3e9d8',this.alt,A.room()+'<rect x="60" y="50" width="110" height="80" rx="4" fill="#dfeaf2" stroke="#8a97a6" stroke-width="3"/>'+A.net(100,122,.6)+A.puck(130,118)+bod(230,240,{pose:'hold',face:'grin',skates:0})+old(236,196,-30,56)+L3.brokenThunder(320,210))}}
+ ]});
+})();
+
+/* ---- content/books/l3-09-stars.js ---- */
+/* Level 3: Under the Stars. A dirt road, a tent, the Milky Way, and the night the sky turned green. */
+(function(){
+var NIGHT='#0f1f3d';
+var sky=function(seed){return A.night()+L3.stars(seed||11,90)};
+var ground=function(){return L3.treeline(200)+'<rect y="200" width="400" height="60" fill="#14301f"/>'};
+var camp=function(){return A.tent(300,236,.9)+A.fire(120,236,.8)};
+var dockNight=function(){return L3.treeline(170)+L3.waterNight(170)+A.dock(120,196,200)};
+var sit=function(bo,doo){return B(170,226,mix({legs:'none',jersey:'#2f6fb5'},bo||{}))+D(250,232,mix({legs:'none'},doo||{}))};
+var lookUp=function(x,y,o){return B(x,y,mix({jersey:'#2f6fb5',pose:'up',face:'wow'},o||{}))};
+
+LEVEL3.push({id:'stars',title:'Under the Stars',level:3,color:'#1b2a44',
+ words:['above','light','world','whole','special','heard','early','people','long','never','thought','really'],
+ cover:function(){return A.svg(NIGHT,'Bodie and Dad sit by a tent and fire under a sky full of stars and green northern lights',sky(5)+L3.aurora(true)+ground()+camp()+sit({face:'wow'},{face:'grin'}))},
+ pages:[
+  {t:"We drove so far that the road turned to gravel. Then the gravel turned to dirt. Then the dirt stopped at a lake. \"No phones out here,\" Dad said. \"No signal at all.\"",
+   alt:"Dad's car on a dirt road that ends at a lake surrounded by trees",
+   art:function(){return A.svg(SKY,this.alt,A.sun(330,50)+A.cloud(80,50,.9)+A.tree(30,150,.8)+A.tree(370,150,.9)+A.water(130)+L3.dirtRoad()+A.car(200,232,'#243454')+A.sign(70,120,'NO SIGNAL','#243454'))}},
+  {t:"We set up the tent before dark. I hammered in the pegs. Dad made the fire. We cooked hot dogs on sticks and burned the first two.",
+   alt:"Bodie hammers tent pegs while Dad cooks hot dogs over the fire at sunset",
+   art:function(){return A.svg('#ff9e6a',this.alt,'<rect width="400" height="70" fill="#ffb27a"/>'+A.sun(330,96,22)+ground()+A.tent(300,236,.9)+L3.peg(226,240)+L3.peg(374,240)+B(190,240,{jersey:'#2f6fb5',pose:'hold',face:'grin'})+L3.mallet(176,210,-30)+A.fire(90,236,.8)+D(40,240,{pose:'hold'})+A.stick(50,186,-50,60)+A.hotdog(100,180,-20))}},
+  {t:"When the sun went down, the sky did something I had never seen. It filled up with stars. Not ten stars. Not a hundred. Thousands and thousands of stars.",
+   alt:"A sky completely full of stars above the campsite",
+   art:function(){return A.svg(NIGHT,this.alt,sky(21)+L3.stars(33,120)+ground()+camp()+lookUp(200,240))}},
+  {t:"At home, you can see a few stars. Out here, the whole sky was white with them. There was a cloudy stripe across the middle. Dad said it was the Milky Way.",
+   alt:"The Milky Way stretches across the sky above Bodie and Dad",
+   art:function(){return A.svg(NIGHT,this.alt,sky(44)+L3.milky()+L3.stars(55,100)+ground()+camp()+lookUp(180,240)+D(260,240,{pose:'wave',face:'grin'}))}},
+  {t:"We lay on our backs on the dock. Dad showed me the Big Dipper. It really did look like a pot with a long handle. I found it by myself after that.",
+   alt:"The Big Dipper above the dock where Bodie and Dad sit looking up",
+   art:function(){return A.svg(NIGHT,this.alt,sky(8)+L3.dipper(230,50,1.1)+dockNight()+sit({pose:'up',face:'wow',y:0},{pose:'wave'}))}},
+  {t:"\"Follow the two stars at the front of the pot,\" Dad said. \"They point to the North Star. Sailors used it to find their way home.\" I found that one too.",
+   alt:"A line from the front of the Big Dipper points to the bright North Star",
+   art:function(){return A.svg(NIGHT,this.alt,sky(8)+L3.dipper(230,80,1.1)+'<line x1="371" y1="95" x2="358" y2="30" stroke="#ffd34d" stroke-width="1.5" stroke-dasharray="4 4"/>'+L3.northStar(356,24)+dockNight()+sit({pose:'wave',face:'grin'},{pose:'wave'}))}},
+  {t:"I saw a star move. Then another. \"Shooting stars,\" Dad said. \"Make a wish.\" I did, but I am not telling what it was. That is the rule.",
+   alt:"Two shooting stars streak across the sky over the dock",
+   art:function(){return A.svg(NIGHT,this.alt,sky(13)+L3.shooting(330,40,70)+L3.shooting(140,70,50)+dockNight()+sit({pose:'up',face:'grin'},{face:'grin'}))}},
+  {t:"Then something strange happened. A green glow came up over the trees. It got bigger. It moved like a curtain in the wind. I grabbed Dad's arm.",
+   alt:"A green glow rises over the trees as Bodie grabs Dad's arm",
+   art:function(){return A.svg(NIGHT,this.alt,sky(17)+L3.aurora(false)+ground()+A.tent(330,236,.8)+B(150,240,{jersey:'#2f6fb5',pose:'out',face:'wow'})+D(240,240,{pose:'hold',face:'wow'}))}},
+  {t:"\"The northern lights,\" Dad whispered. \"I have only seen them a few times in my whole life.\" The green turned to purple at the edges. We did not say anything for a long time.",
+   alt:"Green and purple northern lights fill the sky above the lake",
+   art:function(){return A.svg(NIGHT,this.alt,sky(23)+L3.aurora(true)+dockNight()+'<path d="M0,190 Q200,170 400,190 V230 Q200,210 0,230Z" fill="#58e070" opacity=".12"/>'+sit({face:'wow'},{face:'wow'}))}},
+  {t:"I thought about all the people in the world who were asleep right now. They were missing this. I was not. I was right here, under the whole sky.",
+   alt:"Bodie stands alone and small under a huge sky of stars and northern lights",
+   art:function(){return A.svg(NIGHT,this.alt,sky(29)+L3.stars(61,120)+L3.aurora(true)+L3.treeline(230)+'<rect y="230" width="400" height="30" fill="#14301f"/>'+B(200,254,{jersey:'#2f6fb5',pose:'up',face:'grin',s:.7}))}},
+  {t:"The lights faded just before I fell asleep. Dad carried me to the tent. I woke up once and heard a loon, and then I was gone again.",
+   alt:"Dad carries a sleepy Bodie toward the tent under the moon while a loon floats on the lake",
+   art:function(){return A.svg(NIGHT,this.alt,sky(31)+A.moon(60,50,16)+L3.treeline(180)+L3.waterNight(180)+A.loon(80,205,.5)+'<rect y="215" width="400" height="45" fill="#14301f"/>'+A.tent(310,254,.8)+D(170,254,{pose:'up'})+B(150,184,{jersey:'#2f6fb5',legs:'none',s:.8,rot:-80}))}},
+  {t:"When people ask me about my favourite trip, I do not say the hotel with the pool. I say the dirt road, the dock, and the night the sky turned green.",
+   alt:"Bodie standing on the dock in the morning with his arms up",
+   art:function(){return A.svg(SKY,this.alt,A.sun(340,46)+A.cloud(100,50,.8)+A.tree(30,134,.55)+A.tree(372,134,.6)+A.water(150)+A.dock(120,170,200)+B(220,170,{jersey:'#2f6fb5',pose:'up',face:'grin',s:1.05})+D(140,170,{pose:'wave',face:'grin',s:1.15})+A.car(60,232,'#243454'))}}
+ ]});
+})();
+
+var ALL=BOOKS.concat(LEVEL2,LEVEL3);
 
 var celebrate=function(col){return A.svg(SKY,'Bodie cheering with his arms up, surrounded by stars',A.sun(60,46)+A.grass()+A.star(50,120,14)+A.star(110,70,10)+A.star(300,60,12)+A.star(350,130,16)+A.star(250,36,8)+A.star(160,40,7)+B(200,240,{pose:'up',s:1.2,face:'grin',jersey:col}))};
 
@@ -1284,16 +1842,16 @@ var st={book:null,page:0};
 
 function findBook(id){for(var i=0;i<ALL.length;i++)if(ALL[i].id===id)return ALL[i];return null}
 var guide=$('#guide'),libNote=$('#libNote'),gamehome=$('#gamehome'),cardhome=$('#cardhome');
-var NOTES={l1:'Tap a book to read it. Tap any word to hear it. The <b>abc</b> button lights up the sight words.',l2:'The same stories, with more words on each page. Try the Level 1 book first as a warm up.',guide:'For Dad: how to read together, signs of progress, and the goals we are working toward.',game:'A hockey game for sight words. Score on the right net. Words you master get a gold star.',cards:'Quick sight word cards for the phone. Read it, then tap Got it or Not yet. Every card ends in a win.'};
+var NOTES={l1:'Tap a book to read it. Tap any word to hear it. The <b>abc</b> button lights up the sight words.',l2:'The same stories, with more words on each page. Try the Level 1 book first as a warm up.',l3:'All new stories, with a few sentences on every page. Read one together first, then try it on your own.',guide:'For Dad: how to read together, signs of progress, and the goals we are working toward.',game:'A hockey game for sight words. Score on the right net. Words you master get a gold star.',cards:'Quick sight word cards for the phone. Read it, then tap Got it or Not yet. Every card ends in a win.'};
 var tab=store.get('bb:tab');if(!NOTES[tab])tab='l1';
 function setTab(t){tab=t;store.set('bb:tab',t);var bs=document.querySelectorAll('.tab');for(var i=0;i<bs.length;i++)bs[i].setAttribute('aria-selected',String(bs[i].getAttribute('data-tab')===t));libNote.innerHTML=NOTES[t];shelf.hidden=(t==='guide'||t==='game'||t==='cards');guide.hidden=(t!=='guide');gamehome.hidden=(t!=='game');cardhome.hidden=(t!=='cards');if(t==='game')renderGameHome();else if(t==='cards')renderCardHome();else if(t!=='guide')renderShelf();}
 
 function renderShelf(){
-  shelf.innerHTML=(tab==='l2'?LEVEL2:BOOKS).map(function(b){
+  shelf.innerHTML=(tab==='l3'?LEVEL3:tab==='l2'?LEVEL2:BOOKS).map(function(b){
     var done=+(store.get('bb:done:'+b.id)||0),saved=+(store.get('bb:page:'+b.id)||0);
     var stars=done?'<div class="stars" aria-label="Finished '+done+' time'+(done>1?'s':'')+'">'+Array(Math.min(done,5)+1).join('★')+'</div>':'<div class="stars muted">Not read yet</div>';
     var cta=(saved>0&&saved<b.pages.length)?'Keep reading':'Read';
-    return '<button class="book" data-id="'+b.id+'"><div class="cover">'+b.cover()+(b.level===2?'<span class="lvl">LEVEL 2</span>':'')+'<div class="ttl">'+b.title+'</div></div><div class="meta"><div><div class="pages">'+b.pages.length+' pages</div>'+stars+'</div><span class="go">'+cta+'</span></div></button>';
+    return '<button class="book" data-id="'+b.id+'"><div class="cover">'+b.cover()+(b.level>=2?'<span class="lvl">LEVEL '+b.level+'</span>':'')+'<div class="ttl">'+b.title+'</div></div><div class="meta"><div><div class="pages">'+b.pages.length+' pages</div>'+stars+'</div><span class="go">'+cta+'</span></div></button>';
   }).join('');
 }
 
@@ -1305,7 +1863,7 @@ function renderWords(text){
   }).join(' ');
 }
 function doneHTML(b){
-  return '<div class="done"><h2>You read the whole book!</h2><div class="bigstars">★★★</div><p class="lbl">'+(b.level===2?'Big words I read':'Words I can read')+'</p><div class="chips">'+b.words.map(function(w){return '<span class="chip w" role="button" tabindex="0" data-say="'+esc(w)+'">'+esc(w)+'</span>'}).join('')+'</div><button class="again" id="againBtn">Read it again</button></div>';
+  return '<div class="done"><h2>You read the whole book!</h2><div class="bigstars">★★★</div><p class="lbl">'+(b.level>=2?'Big words I read':'Words I can read')+'</p><div class="chips">'+b.words.map(function(w){return '<span class="chip w" role="button" tabindex="0" data-say="'+esc(w)+'">'+esc(w)+'</span>'}).join('')+'</div><button class="again" id="againBtn">Read it again</button></div>';
 }
 
 function openBook(id,pg){
@@ -1313,7 +1871,7 @@ function openBook(id,pg){
   st.book=b;
   var saved=+(store.get('bb:page:'+id)||0);
   st.page=(typeof pg==='number')?Math.min(pg,b.pages.length):(saved<b.pages.length?saved:0);
-  library.hidden=true;reader.hidden=false;reader.classList.toggle('l2',b.level===2);rTitle.textContent=b.title;
+  library.hidden=true;reader.hidden=false;reader.classList.toggle('l2',b.level===2);reader.classList.toggle('l3',b.level===3);rTitle.textContent=b.title;
   renderPage(0);
 }
 function closeBook(){stopSpeech();st.book=null;reader.hidden=true;library.hidden=false;renderShelf();}

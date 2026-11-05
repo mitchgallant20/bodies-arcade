@@ -83,6 +83,33 @@ test("content/books are on the Level 2 shelf and open by deep link", async ({ pa
   await expect(page.locator("#txt")).toContainText("You read the whole book!");
 });
 
+test("Level 3 shelf lists at least eight books and every page of every book renders", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await page.goto("/play/bodies-books.html#l3", { waitUntil: "networkidle" });
+  await expect(page.locator("#tab-l3")).toHaveAttribute("aria-selected", "true");
+  const ids = await page.locator("#shelf .book").evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.id));
+  expect(ids.length).toBeGreaterThanOrEqual(8);
+  await expect(page.locator("#shelf .book .lvl").first()).toHaveText("LEVEL 3");
+
+  for (const id of ids) {
+    await page.goto(`/play/bodies-books.html#${id}`, { waitUntil: "networkidle" });
+    await expect(page.locator("#reader")).toHaveClass(/l3/);
+    const n = Number((await page.locator("#rPg").textContent())!.split("/")[1]);
+    expect(n, `${id} page count`).toBeGreaterThanOrEqual(12);
+    for (let i = 0; i < n; i++) {
+      await expect(page.locator("#art svg"), `${id} page ${i + 1} art`).toBeVisible();
+      const words = (await page.locator("#txt").innerText()).trim().split(/\s+/).length;
+      expect(words, `${id} page ${i + 1} words`).toBeGreaterThanOrEqual(20);
+      expect(words, `${id} page ${i + 1} words`).toBeLessThanOrEqual(40);
+      expect(await page.locator("#txt").innerText()).not.toContain("—");
+      await page.locator("#nextBtn").click();
+    }
+    await expect(page.locator("#txt")).toContainText("You read the whole book!");
+  }
+  expect(errors, "page errors").toEqual([]);
+});
+
 test("bodie's books deep-links to the Cards shelf", async ({ page }) => {
   await page.goto("/play/bodies-books.html#cards", { waitUntil: "networkidle" });
   await expect(page.locator("#tab-cards")).toHaveAttribute("aria-selected", "true");

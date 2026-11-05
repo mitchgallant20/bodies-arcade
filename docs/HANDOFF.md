@@ -362,8 +362,18 @@ Same rules as the legacy version (ten shots, listen mode and read mode, goalie s
 - Port the book data to TypeScript (`reading/books/data.ts`) keeping ids, titles, colours, words and page text exactly. Port the scene kit and `B()` figure to typed functions returning SVG strings; wrap in a `<Scene>` component.
 - Reader: keep tap-to-hear, `abc` highlighting, "read to me", progress, stars. Sight-word highlighting uses the Dolch list plus any word in an enabled list.
 - Flash Cards: port the swipe/flip interaction; the deck comes from `engine.due()` and the practice pile; "Got it"/"Not yet" report `read-aloud` events with `helped` set if the speaker was tapped first.
-- Shelf: Level 1, Level 2, and (Phase 4) "New stories" for approved AI books, marked with a small "new" tag. Pending AI books are invisible here.
+- Shelf: Level 1, Level 2, Level 3, and (Phase 4) "New stories" for approved AI books, marked with a small "new" tag. Pending AI books are invisible here.
 - (Phase 4) Read to Me: the fluency check, launched by Dad.
+
+### Book levels
+
+| Level | Pages | Per page | Tense and shape | Source |
+|---|---|---|---|---|
+| 1 | 12 | 1 sentence, 4 to 8 words | present, mostly sight words | `legacy/` `BOOKS` |
+| 2 | 12 to 16 | 2 to 3 sentences, 8 to 25 words | past, -ed and -ing, dialogue | `legacy/` `L2SRC` (same stories as Level 1, same art) and `content/books/` |
+| 3 | 12 | 3 to 4 sentences, 25 to 35 words | past, dialogue, sequence words (first, then, after, finally, until, because) | `content/books/l3-*.js`, all new stories with their own art |
+
+Level 3 pages lean on the grade3 and grade3plus lists (Appendix A) and each book's `words` chips are drawn from them where they fit. The reader uses the `l3` class: type one notch smaller than Level 2, picture a little shorter, so a 35-word page fits an iPhone without scrolling. Keep new Level 3 books inside these ranges; the smoke test enforces 20 to 40 words a page and at least 12 pages.
 
 ## 15. Dad's Corner
 
@@ -488,6 +498,13 @@ Order and gating follow this sequence. Keep the exact words; they match the star
 ## Build log
 
 Newest first. One entry per phase or notable decision. Keep it short.
+
+### 2026-11-05: Level 3, nine new stories
+
+- New Level 3 shelf (tab, note, `LEVEL3` array, `l3` reader class), all injected by `scripts/adapt-legacy.mjs`; the legacy file is still untouched. The `/reading/` shelf in the shell links to it.
+- Nine all-new books in `content/books/l3-*.js`, twelve pages each, 25 to 35 words a page: Goalie for a Day, Fog on the Lake, The Night the Lights Went Out, Buzzer Beater, The Fishing Derby, The Free Kick, Pond Hockey, The Broken Stick, Under the Stars. Bodie is the hero, Dad and his sister show up, things go a little wrong then right, no moralising. Each book's "big words" chips come from the grade 3 and stretch lists where they fit.
+- Shared Level 3 props (fog, candles, flashlight beam, aurora, headlights, broken stick, boots-for-goals and so on) live in `content/books/_l3-kit.js`, built on the legacy art kit.
+- Level definitions are now written down in Section 14. Smoke test walks every page of every Level 3 book and checks the word range.
 
 ### 2026-11-05: First new book, and where new books live
 
