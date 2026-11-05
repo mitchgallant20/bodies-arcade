@@ -6,6 +6,7 @@ export const metadata = { title: "Reading Room" };
 const SHELVES = [
   { hash: "l1", title: "Level 1", sub: "Short books. One line a page." },
   { hash: "l2", title: "Level 2", sub: "Same stories, more words." },
+  { hash: "l3", title: "Level 3", sub: "All new stories. Big pages." },
   { hash: "cards", title: "Cards", sub: "Flash cards. Every card ends in a win." },
   { hash: "game", title: "Shootout", sub: "Hear a word. Shoot it in the net." },
   { hash: "guide", title: "Guide", sub: "For Dad: how to read together." },
