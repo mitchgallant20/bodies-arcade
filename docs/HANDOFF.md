@@ -489,6 +489,14 @@ Order and gating follow this sequence. Keep the exact words; they match the star
 
 Newest first. One entry per phase or notable decision. Keep it short.
 
+### 2026-11-05: First new book, and where new books live
+
+- Added "The Big Comeback", a 16-page Level 2 book about the Jets' 5-4 overtime win in Montreal on November 3, 2026 (down 4-0 in the third, Bauer's Gordie Howe hat trick, Connor twice off Scheifele, Samberg in OT, nine-game winless streak over). Bodie and Dad watch it on TV. Real names are kept so he reads the ones he hears on the broadcast.
+- New books go in `content/books/*.js`, one per file, same shape as the legacy entries, pushed onto `BOOKS` or `LEVEL2`. `scripts/adapt-legacy.mjs` inlines them into the play page before `ALL` is built, so `legacy/` stays read-only and the TypeScript port (Section 14) will read both locations. Until that port, this is the home for hand-written stories.
+- Level 2 pages in the legacy books run 8 to 18 words; this one runs 16 to 24, on purpose ("a little longer"). Keep new Level 2 books in that range.
+- Smoke test walks every page of the new book and checks the Level 2 shelf card.
+- Updates do not touch progress: stars, bests and saved pages live in `localStorage` on the phone, keyed by origin, so a deploy to the same URL keeps them. Moving to a new domain (Vercel, custom domain, the Capacitor shell) would start from zero; the Dexie plus Supabase sync in Phase 2 is the fix.
+
 ### 2026-11-02: Shell fixes after first review
 
 - Home's READING ROOM door now goes to `/reading/` (the shelf), matching the Arcade door and the IA in Section 6. The shelf deep-links into the legacy page by tab, so Bodie lands on Level 1, Cards or the Shootout in one tap.
