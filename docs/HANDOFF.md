@@ -341,10 +341,18 @@ Input: computed stats only (words known/star by list, minutes, sessions, modalit
 
 Same rules as the legacy version (ten shots, listen mode and read mode, goalie saves on a miss). Read mode reports `modality: 'read-aloud'` with Dad confirming via the Score/Save buttons. Stars now come from the engine, not local counters.
 
-### New cabinet: Fishing for Words (Phase 3)
+### New cabinet: Big Catch (Phase 3, shipped 2026-11-07)
 
-- Side view of the dock from Purple Turtles. Fish swim by carrying word signs. He hears a word, taps the matching fish to cast; a hooked fish fights (tap-mash to reel) and lands in the bucket. Wrong fish just swims off (no penalty). Five fish per round, timed bucket bonus. Levels: more fish, faster, confusable pairs together.
-- Modality: `hear-pick`; a read mode shows the word on the bucket instead (`read-pick`).
+Replaces the earlier "Fishing for Words" sketch. A progression fishing game first (that is what makes him come back), with word mode layered on top. Source: `games/fishing/big-catch.html`, built into `public/play/big-catch.html`.
+
+- **Core loop (three phases that feed each other).** Hold to cast (a swinging power meter sets distance; distance sets the zone: weeds, middle, deep). Wait while visible fish shadows swim in a side-on "aquarium" cut of the lake, so depth is something he can see; nibbles bob the bobber, a real bite dunks it and the fish gets one generous tap window (and usually comes back once if he misses). The fight is a threshold fight: hold to reel, let go when the fish runs. Two big colour-coded bars (fish to net, line tension). Red for too long snaps the line; no lives, no points lost, the status just says what to do next time.
+- **World.** Five Manitoba waters, each with its own scene, fish list and legend: The Dock (home lake), Red River (catfish), Lake Winnipeg (greenback walleye), Whiteshell (lake trout, bass) and Lake of the Woods (muskie, fished from a boat). Lakes unlock on fish caught, kinds caught and coins, shown as chips he can read. Bigger water rolls bigger fish.
+- **Day.** Each day is 15 casts from 6 AM to 9 PM (20 with the Headlamp); the sky, the sun and the bite tables move with the clock, and the weather (sun, cloud, rain) shifts which fish bite, Black Bass style. A day ends on a summary card that is always a win ("Sleepy fish" on a zero day), then NEW DAY.
+- **Gear.** Lures pick the depth and the fish (worm, spinner, spoon, jig, crankbait, frog, stink bait, glow jig, big sucker). Rods cast farther and hold a stronger line. Reels pull faster. Extras: Lucky Hat, Fish Finder (shadows become real fish), Big Net, Headlamp. Rods and reels never downgrade.
+- **Records.** 22 species with a Fish Book (silhouettes until caught, count and best length), 30 badges, and Master Angler tags at Manitoba's real minimum lengths (walleye 71 cm, pike 104, channel catfish 88.9, lake trout 89, sturgeon 109, and so on), so the game's biggest goals are ones he could chase for real.
+- **Word mode** (`#reading`, or the toggle): when a fish bites he hears a word and taps the matching card to set the hook. Wrong pick shakes, greys out, the word is spoken again, the fish waits (rule 1). Right pick hooks the fish with a WORD BONUS. The catch card speaks the fish name on tap. Posts `hook`, `catch`, `word_prompt`, `word_correct`, `word_wrong` to a parent page and exposes `window.BodieGame.reading.setWords()` for the engine.
+- **Save.** `bbc_save` (JSON) plus `bbc_fish`, `bbc_bigcm`, `bbc_bigsp` for the cabinet marquee. START OVER in the pause sheet needs two taps.
+- **Controls.** One big action button (right in landscape, under the screen in portrait) plus the water itself; SPACE on a keyboard. Four menu buttons: SHOP, FISH, BADGES, LAKES, with a red dot when something new is waiting.
 
 ### New cabinet: Canoe Rapids (Phase 3)
 
@@ -430,7 +438,7 @@ Two wings, two moods, one family.
 - Done when: a full run completes end to end on an iPhone; word states survive a reinstall (via Supabase); dashboard numbers match a hand count from the event log; tests green.
 
 ### Phase 3: New cabinets
-- Fishing for Words, then Canoe Rapids, each passing the plugin harness and device matrix.
+- Big Catch (shipped as a play page, see Section 13), then Canoe Rapids, each passing the plugin harness and device matrix.
 - Done when: both are playable in plain and reading mode, with a best-score marquee, and Bodie picks them on his own.
 
 ### Phase 4: AI
@@ -498,6 +506,14 @@ Order and gating follow this sequence. Keep the exact words; they match the star
 ## Build log
 
 Newest first. One entry per phase or notable decision. Keep it short.
+
+### 2026-11-07: Big Catch, the fishing cabinet
+
+- New cabinet, built from scratch as a single-file play page in `games/fishing/big-catch.html` and wrapped into `public/play/big-catch.html` by `scripts/adapt-legacy.mjs` (same head, fonts and HOME behaviour as the legacy pages; the script now takes a source directory). Replaces the "Fishing for Words" sketch; the design is in Section 13.
+- Design notes borrowed on purpose: lures that work by depth, time of day and weather, and a day that runs sunrise to sunset (The Black Bass); visible fish shadows and a journal that fills in (Animal Crossing); a hold-to-reel tension fight tuned forgiving (Stardew Valley, Zelda); discovery unlocking new water and a shop where every upgrade changes what you can catch (Ridiculous Fishing). Master Angler lengths are the real Manitoba minimums.
+- Cabinet row: `Cabinet.stats` lets a cabinet show its own numbers (Big Catch shows fish caught and biggest in cm from `bbc_fish` and `bbc_bigcm`). Service worker precache bumped to `arcade-v2` with the new play page. Smoke test boots the page at all three sizes, makes one cast, and checks the cabinet's PLAY and WORD MODE links.
+- Tuning as shipped: bite chance 0.55 to 0.95 by lure, time and weather; bite window 1.0 to 1.5 s plus 0.25 with the Big Net; one free second chance on a missed bite most of the time; a perch lands by just holding, a walleye needs one rest, a big pike runs about four times, a muskie about five. Master Angler lands about one catch in twenty five on the home lake, more on the big lakes. Each day is roughly four minutes of play.
+- Not yet done: the `GameModule` port (it runs as a play page like the others), the plugin harness, haptics beyond `navigator.vibrate`, and a real play test with Bodie.
 
 ### 2026-11-05: Level 3, nine new stories
 

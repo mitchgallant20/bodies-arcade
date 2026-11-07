@@ -14,6 +14,7 @@ export interface Cabinet {
   href?: string; // Phase 1: the page that runs the game
   readingHref?: string; // same page with word mode on
   bestKey?: string; // localStorage key holding the best score (legacy)
+  stats?: { label: string; key: string; suffix?: string }[]; // other numbers the cabinet shows
   phase: string;
 }
 
@@ -42,11 +43,17 @@ export const CABINETS: Cabinet[] = [
   },
   {
     id: "fishing",
-    title: "FISHING FOR WORDS",
-    blurb: "Tap the fish with your word. Reel it in!",
+    title: "BIG CATCH",
+    blurb: "Cast. Wait for the bite. Reel in the big one!",
     orientation: "landscape-preferred",
     supportsReadingMode: true,
-    status: "soon",
+    status: "ready",
+    href: "/play/big-catch.html",
+    readingHref: "/play/big-catch.html#reading",
+    stats: [
+      { label: "Fish", key: "bbc_fish" },
+      { label: "Biggest", key: "bbc_bigcm", suffix: " cm" },
+    ],
     phase: "Phase 3",
   },
   {

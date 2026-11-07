@@ -6,10 +6,15 @@ import { useClientValue } from "@/lib/useClientValue";
 
 function readStats() {
   const best: Record<string, number> = {};
-  for (const c of CABINETS) if (c.bestKey) best[c.id] = Number(getItem(c.bestKey) ?? 0) || 0;
+  const extra: Record<string, number> = {};
+  for (const c of CABINETS) {
+    if (c.bestKey) best[c.id] = Number(getItem(c.bestKey) ?? 0) || 0;
+    for (const s of c.stats ?? []) extra[s.key] = Number(getItem(s.key) ?? 0) || 0;
+  }
   const deck = getItem("bb:gdeck") ?? "rookie";
   return {
     best,
+    extra,
     shootoutGames: Number(getItem("bb:games") ?? 0) || 0,
     shootoutBest: Number(getItem(`bb:gbest:${deck}`) ?? 0) || 0,
     shootoutDeck: deck,
@@ -28,6 +33,9 @@ export default function CabinetRow() {
           {c.status === "ready" && stats && (
             <div className="stats">
               {c.bestKey && <span>Best <b>{stats.best[c.id] ?? 0}</b></span>}
+              {c.stats?.map((s) => (
+                <span key={s.key}>{s.label} <b>{stats.extra[s.key] ?? 0}{s.suffix ?? ""}</b></span>
+              ))}
               {c.id === "shootout" && (
                 <>
                   <span>Games <b>{stats.shootoutGames}</b></span>

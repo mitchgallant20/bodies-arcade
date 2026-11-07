@@ -2,7 +2,7 @@
 
 Retro mini games and picture books that teach sight words, as one installable iPhone web app. Two wings and a parent room:
 
-- **Arcade.** Purple Turtles (a Commodore 64 remake) and the Sight Word Shootout, each playable plain or in word mode.
+- **Arcade.** Purple Turtles (a Commodore 64 remake), the Sight Word Shootout, and Big Catch (a Manitoba fishing game with five lakes, a tackle shop, a fish book and Master Angler badges), each playable plain or in word mode.
 - **Reading Room.** Bodie's Books: Level 1 and Level 2 picture books, tap-to-hear, Flash Cards, and the parent Guide.
 - **Dad's Corner.** PIN-gated progress, settings and the Guide.
 
@@ -15,7 +15,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3000. The games live at `/play/purple-turtles.html` and `/play/bodies-books.html` (generated from `legacy/` on every build).
+Open http://localhost:3000. The games live at `/play/purple-turtles.html`, `/play/bodies-books.html` and `/play/big-catch.html` (generated from `legacy/` and `games/` on every build).
 
 ## Test it
 

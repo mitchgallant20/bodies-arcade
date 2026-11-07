@@ -10,7 +10,8 @@ One installable web app for an iPhone: an **Arcade** of retro mini games that ca
 ## Where things are
 
 - `app/` Next.js App Router shell (static export). Routes: `/`, `/arcade`, `/reading`, `/dad`, `/offline`.
-- `public/play/` **generated** from `legacy/` by `scripts/adapt-legacy.mjs` (runs on `prebuild`). Edit the script, never the output.
+- `public/play/` **generated** by `scripts/adapt-legacy.mjs` (runs on `prebuild`) from `legacy/` and from the new cabinets in `games/*/`. Edit the sources and the script, never the output.
+- `games/fishing/big-catch.html` the Big Catch fishing cabinet, written for the arcade (not a port) as the same kind of single-file fragment as the legacy pages. Design and tuning are in HANDOFF Section 13. Edit it directly, then run `node scripts/adapt-legacy.mjs`.
 - `content/books/*.js` **new books** for Bodie's Books, one per file, in the same shape as the legacy `BOOKS` and `LEVEL2` entries (push onto `LEVEL2` or `LEVEL3`; the page's art kit `A.*`, `B`, `D`, `person`, `mix`, `tvRoom` is in scope, plus `L3.*` props from `_l3-kit.js`). The adapt script inlines them, so the legacy file stays read-only. After adding one, run `node scripts/adapt-legacy.mjs` and commit the regenerated `public/play/bodies-books.html`. `content/books/jets-comeback.js` (Level 2) and `l3-01-goalie.js` (Level 3) are the worked examples. Level ranges are in HANDOFF Section 14, "Book levels".
 - `games/types.ts`, `lib/engine/types.ts` the shared contracts from HANDOFF Section 7. `games/registry.ts` is the cabinet row.
 - `lib/engine/lists.ts` the word lists (Appendix A) with unit tests beside it.

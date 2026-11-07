@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-const ROUTES = ["/", "/arcade/", "/reading/", "/dad/", "/offline/", "/play/purple-turtles.html", "/play/bodies-books.html"];
+const ROUTES = ["/", "/arcade/", "/reading/", "/dad/", "/offline/", "/play/purple-turtles.html", "/play/bodies-books.html", "/play/big-catch.html"];
 
 for (const route of ROUTES) {
   test(`boots ${route} with no console errors and no sideways scroll`, async ({ page }) => {
@@ -61,6 +61,29 @@ test("purple turtles reaches its title screen", async ({ page }) => {
   await page.goto("/play/purple-turtles.html", { waitUntil: "networkidle" });
   await expect(page.locator("#playBtn")).toBeVisible();
   await expect(page.locator("#title a[data-home]")).toBeVisible();
+});
+
+test("big catch reaches its title screen and shows the fishing cabinet", async ({ page }) => {
+  await page.goto("/play/big-catch.html", { waitUntil: "networkidle" });
+  await expect(page.locator("#playBtn")).toBeVisible();
+  await expect(page.locator("#title a[data-home]")).toBeVisible();
+  // One cast, start to finish: hold the big button, wait for a bite or an empty retrieve.
+  await page.locator("#playBtn").click();
+  const state = () => page.evaluate(() => (window as unknown as { BodieGame: { state: string } }).BodieGame.state);
+  expect(await state()).toBe("idle");
+  const box = (await page.locator("#actBtn").boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.waitForTimeout(500);
+  await page.mouse.up();
+  await expect.poll(state, { timeout: 15000 }).toMatch(/^(bite|idle)$/);
+  expect(await page.locator("#status").innerText()).not.toContain("—");
+
+  await page.goto("/arcade/", { waitUntil: "networkidle" });
+  const cab = page.locator('.cabinet[aria-label="BIG CATCH"]');
+  await expect(cab.locator(".screen")).toHaveText("BIG CATCH");
+  await expect(cab.getByRole("link", { name: "PLAY" })).toHaveAttribute("href", /\/play\/big-catch\.html$/);
+  await expect(cab.getByRole("link", { name: "WORD MODE" })).toHaveAttribute("href", /#reading$/);
 });
 
 test("content/books are on the Level 2 shelf and open by deep link", async ({ page }) => {

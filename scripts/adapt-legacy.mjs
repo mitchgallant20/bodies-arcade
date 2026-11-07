@@ -63,8 +63,8 @@ const homeScript = `<script>
 </script>
 `;
 
-function wrap(name, themeColor, transform, extraCss = "") {
-  let html = readFileSync(join(src, name), "utf8");
+function wrap(name, themeColor, transform, extraCss = "", dir = src) {
+  let html = readFileSync(join(dir, name), "utf8");
   html = html.replace(/<link rel="preconnect"[^>]*>\s*/g, "");
   html = html.replace(/<link rel="stylesheet" href="https:\/\/fonts\.googleapis\.com[^"]*">\s*/g, "");
   if (html.includes("fonts.googleapis.com")) throw new Error(`${name}: Google Fonts link still present`);
@@ -126,3 +126,8 @@ wrap("bodies-books.html", "#eaf2f8", (body) => {
 #reader.l3 .art{width:min(100%,calc(30vh * 400 / 260))}
 /* Six tabs no longer fit one row on an iPhone; let them wrap instead of clipping "Guide". */
 @media (max-width:430px){.tabs{flex-wrap:wrap;border-radius:24px}.tab{flex:1 1 auto}}`);
+
+// New cabinets written for the arcade (not legacy ports) live in games/<id>/*.html as the same
+// kind of fragment (title, style, markup, script) and get the same wrapper, so they share the
+// fonts, safe areas and HOME behaviour. They already carry their own data-home links.
+wrap("big-catch.html", "#150f30", (body) => body, "", join(root, "games", "fishing"));
