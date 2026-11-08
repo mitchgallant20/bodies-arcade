@@ -514,6 +514,7 @@ Newest first. One entry per phase or notable decision. Keep it short.
 - Cabinet row: `Cabinet.stats` lets a cabinet show its own numbers (Big Catch shows fish caught and biggest in cm from `bbc_fish` and `bbc_bigcm`). Service worker precache bumped to `arcade-v2` with the new play page. Smoke test boots the page at all three sizes, makes one cast, and checks the cabinet's PLAY and WORD MODE links.
 - Tuning as shipped: bite chance 0.55 to 0.95 by lure, time and weather; bite window 1.0 to 1.5 s plus 0.25 with the Big Net; one free second chance on a missed bite most of the time; a perch lands by just holding, a walleye needs one rest, a big pike runs about four times, a muskie about five. Master Angler lands about one catch in twenty five on the home lake, more on the big lakes. Each day is roughly four minutes of play.
 - Not yet done: the `GameModule` port (it runs as a play page like the others), the plugin harness, haptics beyond `navigator.vibrate`, and a real play test with Bodie.
+- 2026-11-08 fixes from the first real play: the whole page is now unselectable (iPhone was grabbing SHOP / LAKES / the fish name during tap-reeling and throwing up the Copy bar over the fight and the catch card), and the catch card holds before it can be closed, 1.0 s for an ordinary fish and 1.8 s for a new fish, a personal best, a Master Angler or a rare one, with KEEP FISHING dimmed until then. Observed: he tap-reels rather than holding; the fight still works that way, just slower.
 
 ### 2026-11-05: Level 3, nine new stories
 
