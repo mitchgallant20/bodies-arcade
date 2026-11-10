@@ -213,6 +213,7 @@ canvas#scene{position:absolute;inset:0;width:100%;height:100%;display:block}
 .fishcard .medals span.won{filter:none}
 .lakehead{grid-column:1/-1;font-family:var(--display);font-size:9px;color:var(--turtle);margin:6px 0 0}
 .lakehead:first-child{margin-top:0}
+.gridnote{grid-column:1/-1;font-size:13px;color:var(--muted);line-height:1.25;margin:-6px 0 0}
 .lake{display:grid;grid-template-columns:110px 1fr;gap:12px;align-items:center;background:#1b1444;border:2px solid var(--cab-edge);border-radius:12px;padding:10px;margin-bottom:10px}
 .lake.here{border-color:var(--good)}
 .lake canvas{display:block;width:100%;aspect-ratio:16/10;border-radius:8px}
@@ -1012,7 +1013,11 @@ function addBait(n){
   }
   persist(); updateJar();
 }
-function updateJar(){ const el=$('jarLbl'); if(el) el.textContent='🪱 '+(S.bait||0)+' / '+JAR; const el2=$('spellJar'); if(el2) el2.textContent='🪱 '+(S.bait||0)+' / '+JAR; }
+function updateJar(){
+  const t='🪱 '+(S.bait||0)+' / '+JAR;
+  for(const id of ['jarLbl','spellJar']){ const el=$(id); if(el) el.textContent=t; }
+  const sb=$('spellBtn'); if(sb) sb.textContent='SPELL IT '+t;
+}
 function setReading(on){
   READING.enabled=!!on; $('readingToggle').checked=READING.enabled; save('bbc_reading',READING.enabled);
 }
@@ -1982,7 +1987,7 @@ function landFish(){
   $('catchTags').innerHTML=tags.map(([t,c])=>'<span class="'+c+'">'+t+'</span>').join('');
   paintFishOn($('catchArt'),sp,len);
   $('catchName').textContent=f.name; sayText=f.name; spellFish=sp;
-  $('spellBtn').hidden=!READING.enabled;
+  $('spellBtn').hidden=!READING.enabled; updateJar();
   const inches=Math.round(len/2.54);
   $('catchSize').textContent=Math.round(len)+' cm ('+inches+' in), '+fmtW(weightLb(sp,len));
   $('catchCoins').textContent='+'+coins+' COINS';
@@ -2309,23 +2314,34 @@ function renderJournal(){
     }
   }
 }
+// Ice badges live in their own section: they can only be earned on the ice, so they are not part
+// of the "all badges" set that opens the ice. The count up top is the count that matters for that.
+const mainBadges=()=>BADGES.filter(b=>!b.winter), winterBadges=()=>BADGES.filter(b=>b.winter);
+const wonOf=list=>list.filter(b=>S.badges.includes(b.id)).length;
 function renderBadges(){
   const g=$('badgeGrid'); g.innerHTML='';
-  $('badgeCount').textContent=S.badges.length+' / '+BADGES.length;
-  for(const b of BADGES){
+  const main=mainBadges(), winter=winterBadges();
+  $('badgeCount').textContent=wonOf(main)+' / '+main.length+(wonOf(winter)?' · ❄️ '+wonOf(winter)+' / '+winter.length:'');
+  const add=list=>{ for(const b of list){
     const won=S.badges.includes(b.id);
     const el=document.createElement('div'); el.className='badge'+(won?' won':'');
     el.innerHTML='<span class="ico" aria-hidden="true">'+b.ico+'</span><span class="nm">'+b.name+'</span><span class="sub">'+b.sub+'</span>';
     g.appendChild(el);
-  }
+  } };
+  add(main);
+  const h=document.createElement('div'); h.className='lakehead'; h.textContent='❄️ ICE BADGES'; g.appendChild(h);
+  const note=document.createElement('div'); note.className='gridnote';
+  note.textContent=S.unlocked.includes('ice')?'You get these on the ice.':'You get these on the ice. You do not need them to open the ice.';
+  g.appendChild(note);
+  add(winter);
 }
 function unlockOk(l){
   const u=l.unlock; if(!u) return {ok:true,chips:[]};
   if(u.all){
-    const allBadges=BADGES.filter(b=>!b.winter).every(b=>S.badges.includes(b.id));
+    const main=mainBadges(), hb=wonOf(main);
+    const allBadges=hb>=main.length;
     const allFish=FISH_IDS.every(sp=>!!S.best[sp]);
-    const nb=BADGES.filter(b=>!b.winter).length, hb=BADGES.filter(b=>!b.winter&&S.badges.includes(b.id)).length;
-    const chips=[['🏅 all badges ('+hb+'/'+nb+')',allBadges],['📖 every fish ('+Object.keys(S.best).length+'/'+FISH_IDS.length+')',allFish]];
+    const chips=[['🏅 all badges ('+hb+'/'+main.length+')',allBadges],['📖 every fish ('+Object.keys(S.best).length+'/'+FISH_IDS.length+')',allFish]];
     return {ok:allBadges&&allFish,chips};
   }
   const species=Object.keys(S.best).length, ma=Object.keys(S.ma).length;
@@ -2367,6 +2383,13 @@ function renderLakes(){
       const ch=document.createElement('div'); ch.className='chips'; ch.style.justifyContent='flex-start';
       ch.innerHTML=chips.map(([t,k])=>'<span class="chip-s '+(k?'ok':'no')+'">'+t+'</span>').join('');
       info.appendChild(ch);
+      if(l.unlock.all){
+        // Say which badges are still to get. Ice badges are not in the list; they come after.
+        const miss=mainBadges().filter(b=>!S.badges.includes(b.id));
+        const d=document.createElement('div'); d.className='sub'; d.style.margin='6px 0 0';
+        d.textContent=miss.length?'Badges to get: '+miss.map(b=>b.ico+' '+b.name).join(', '):'Ice badges come after. You do not need them.';
+        info.appendChild(d);
+      }
       const b=document.createElement('button'); b.type='button'; b.className='mini'; b.style.marginTop='6px'; b.textContent=ok?'UNLOCK':'LOCKED'; b.disabled=!ok;
       if(ok) b.addEventListener('click',()=>{ S.coins-=(l.unlock.coins||0); S.unlocked.push(l.id); Audio.bigJingle(); persist(); checkBadges(); travel(l,'shore'); });
       info.appendChild(b);
