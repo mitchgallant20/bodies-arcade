@@ -543,7 +543,7 @@ const FISH={
   laketrout:{name:'Lake Trout',  min:35,max:106,ma:89, c:0.022, rarity:3, depth:[2],   lures:{spoon:1.6,jig:1.3,sucker:1.2}, time:{dawn:1.5,dusk:1.3}, weather:{cloud:1.2}, shape:'trout', col:'#5f6f7a', belly:'#e4ecef', stripe:'#34424a', fight:1.2},
   brook:   {name:'Brook Trout',  min:18,max:58, ma:51, c:0.026, rarity:3, depth:[0,1], lures:{spinner:1.5,worm:1.2,spoon:1.2}, time:{dawn:1.6,dusk:1.3}, weather:{rain:1.3}, shape:'trout', col:'#3f6a4a', belly:'#f3c57a', stripe:'#1f3d28', fight:0.8},
   rainbow: {name:'Rainbow Trout',min:20,max:62, ma:51, c:0.026, rarity:2, depth:[0,1], lures:{spinner:1.5,spoon:1.3,worm:1.1}, time:{dawn:1.4,day:1.1}, shape:'trout', col:'#6b8fa8', belly:'#f0f4f8', stripe:'#d85c7a', fight:0.9},
-  muskie:  {name:'Muskie',       min:60,max:140,ma:79, c:0.018, rarity:5, depth:[1],   lures:{sucker:2.0,frog:1.4,spoon:1.2}, time:{dusk:1.6,day:1.0}, weather:{cloud:1.3}, shape:'pike', col:'#7a8a5a', belly:'#e8eccc', stripe:'#3c4a2c', fight:1.6},
+  muskie:  {name:'Muskie',       min:60,max:140,ma:79, c:0.018, rarity:5, depth:[1],   lures:{sucker:2.0,frog:1.4,spoon:1.2}, time:{dusk:1.6,day:1.0}, weather:{cloud:1.3}, shape:'muskie', col:'#aeb87e', belly:'#f3f3df', stripe:'#34421f', fin:'#d2562a', fight:1.6},
   sturgeon:{name:'Sturgeon',     min:50,max:160,ma:109,c:0.019, rarity:5, depth:[2],   lures:{sucker:1.8,stink:1.5,worm:1.1}, time:{night:1.4,dusk:1.2}, shape:'sturgeon', col:'#6a6a70', belly:'#d2d2d6', stripe:'#3a3a40', fight:1.8},
 };
 const FISH_IDS=Object.keys(FISH);
@@ -746,7 +746,7 @@ function makeShadow(lake,anywhere){
   const far=x>dockX+0.6*(W-dockX);
   const roll=sizeRoll(lake.bonus+d*0.05+(far?0.06:0)+(slot==='dawn'||slot==='dusk'?0.04:0));
   const len=clamp(f.min+(f.max-f.min)*roll,f.min,f.max);
-  return {sp,len,d,x,y:bandY(d),dir,speed:rnd(10,22)*(f.shape==='pike'?0.8:1),wig:Math.random()*6,turn:0,hooked:false,chasing:false,life:rnd(20,60)};
+  return {sp,len,d,x,y:bandY(d),dir,speed:rnd(10,22)*(f.shape==='pike'?0.8:f.shape==='muskie'?0.7:1),wig:Math.random()*6,turn:0,hooked:false,chasing:false,life:rnd(20,60)};
 }
 function updateShadows(){
   const lake=lakeById(S.lake);
@@ -965,7 +965,7 @@ function drawShadow(s){
   if(finder){ ctx.globalAlpha=0.55; drawFish(ctx,s.sp,0,0,Math.max(14,s.len*0.6),1,{plain:false,time}); ctx.globalAlpha=1; }
   else{
     ctx.fillStyle='rgba(5,10,30,.5)';
-    const bl=Math.max(10,28*scale), bh=Math.max(4,9*scale*(f.shape==='pike'||f.shape==='sturgeon'?0.7:f.shape==='sunfish'?1.3:1));
+    const bl=Math.max(10,28*scale), bh=Math.max(4,9*scale*(f.shape==='pike'||f.shape==='muskie'||f.shape==='sturgeon'?0.7:f.shape==='sunfish'?1.3:1));
     ctx.beginPath(); ctx.ellipse(0,0,bl,bh,0,0,Math.PI*2); ctx.fill();
     const wag=Math.sin(time*8+s.wig)*3;
     ctx.beginPath(); ctx.moveTo(-bl+2,0); ctx.lineTo(-bl-bh*1.2,-bh+wag); ctx.lineTo(-bl-bh*1.2,bh+wag); ctx.fill();
@@ -979,9 +979,10 @@ function drawFish(c,sp,x,y,len,dir,o){
   const f=FISH[sp]; o=o||{};
   const silhouette=!!o.silhouette;
   c.save(); c.translate(x,y); c.scale(dir||1,1);
-  const L=len, hh=L*({pike:0.14,sturgeon:0.14,walleye:0.2,trout:0.2,shiner:0.2,catfish:0.22,bass:0.26,panfish:0.3,sunfish:0.4,carp:0.28,drum:0.28}[f.shape]||0.22);
+  const L=len, hh=L*({pike:0.14,muskie:0.13,sturgeon:0.14,walleye:0.2,trout:0.2,shiner:0.2,catfish:0.22,bass:0.26,panfish:0.3,sunfish:0.4,carp:0.28,drum:0.28}[f.shape]||0.22);
   const body=silhouette?'#0d0a2c':f.col, belly=silhouette?'#0d0a2c':f.belly, stripe=silhouette?'#0d0a2c':f.stripe;
   const wag=o.time!==undefined?Math.sin(o.time*7)*L*0.04:0;
+  if(f.shape==='muskie'){ drawMuskie(c,f,L,hh,silhouette,wag); c.restore(); return; }
   // Tail
   c.fillStyle=body; c.beginPath(); c.moveTo(-L*0.42,0); c.lineTo(-L*0.55,-hh*0.9+wag); c.lineTo(-L*0.5,0); c.lineTo(-L*0.55,hh*0.9+wag); c.closePath(); c.fill();
   // Body
@@ -995,7 +996,8 @@ function drawFish(c,sp,x,y,len,dir,o){
     // Markings
     c.fillStyle=stripe;
     if(f.shape==='panfish'||f.shape==='bass'){ for(let i=-2;i<=2;i++){ c.fillRect(i*L*0.12-L*0.02,-hh*0.8,L*0.04,hh*1.1); } }
-    if(f.shape==='pike'||f.shape==='trout'||f.shape==='sturgeon'){ for(let i=-4;i<=3;i++){ c.beginPath(); c.arc(i*L*0.09,(i%2?-1:1)*hh*0.3,L*0.015+1,0,Math.PI*2); c.fill(); } }
+    if(f.shape==='pike'){ c.fillStyle=f.belly; for(let i=-4;i<=3;i++){ c.beginPath(); c.ellipse(i*L*0.09,(i%2?-1:1)*hh*0.3,L*0.03,L*0.012+1,0,0,Math.PI*2); c.fill(); } c.fillStyle=stripe; }
+    if(f.shape==='trout'||f.shape==='sturgeon'){ for(let i=-4;i<=3;i++){ c.beginPath(); c.arc(i*L*0.09,(i%2?-1:1)*hh*0.3,L*0.015+1,0,Math.PI*2); c.fill(); } }
     if(f.shape==='walleye'||f.shape==='drum'){ for(let i=-2;i<=2;i++){ c.beginPath(); c.ellipse(i*L*0.14,-hh*0.3,L*0.05,hh*0.35,0.4,0,Math.PI*2); c.fill(); } }
     if(f.shape==='sunfish'){ c.beginPath(); c.arc(L*0.2,-hh*0.35,hh*0.22,0,Math.PI*2); c.fill(); }
     if(f.shape==='carp'){ c.strokeStyle=stripe; c.lineWidth=Math.max(1,L*0.01); for(let i=-3;i<=3;i++){ c.beginPath(); c.arc(i*L*0.11,0,hh*0.5,Math.PI*0.6,Math.PI*1.4); c.stroke(); } }
@@ -1017,6 +1019,53 @@ function drawFish(c,sp,x,y,len,dir,o){
     if(f.shape==='pike'){ c.fillStyle='#fff'; for(let i=0;i<3;i++) c.fillRect(L*0.3+i*L*0.05,hh*0.1,L*0.02,hh*0.25); }
   }
   c.restore();
+}
+// The muskie. Long and flat-headed like a pike, but a light gold-green fish with dark vertical bars
+// (pike is the reverse: dark fish, light spots), a deep pointed tail, rust-red fins flecked with
+// dark spots, and a gold eye. The king of fish should look like one.
+function drawMuskie(c,f,L,hh,sil,wag){
+  const body=sil?'#0d0a2c':f.col, belly=sil?'#0d0a2c':f.belly, bars=sil?'#0d0a2c':f.stripe, fin=sil?'#0d0a2c':f.fin, finDark=sil?'#0d0a2c':'#6e2410';
+  c.scale(0.9,0.95); // the tail and jaw run past the ends; keep the whole fish inside its box
+  // Tail: deep fork, pointed lobes
+  c.fillStyle=fin; c.beginPath(); c.moveTo(-L*0.38,-hh*0.35); c.lineTo(-L*0.6,-hh*1.35+wag); c.lineTo(-L*0.5,0); c.lineTo(-L*0.6,hh*1.35+wag); c.lineTo(-L*0.38,hh*0.35); c.closePath(); c.fill();
+  // Dorsal and anal fins sit far back, pike family style
+  c.beginPath(); c.moveTo(-L*0.34,-hh*0.7); c.lineTo(-L*0.26,-hh*1.65); c.lineTo(-L*0.06,-hh*0.85); c.closePath(); c.fill();
+  c.beginPath(); c.moveTo(-L*0.34,hh*0.7); c.lineTo(-L*0.26,hh*1.55); c.lineTo(-L*0.06,hh*0.85); c.closePath(); c.fill();
+  // Pelvic and pectoral fins
+  c.beginPath(); c.moveTo(-L*0.02,hh*0.8); c.lineTo(-L*0.1,hh*1.35); c.lineTo(L*0.08,hh*0.9); c.closePath(); c.fill();
+  // Body: torpedo with a long flat duckbill
+  c.fillStyle=body; c.beginPath();
+  c.moveTo(L*0.52,-hh*0.08);
+  c.quadraticCurveTo(L*0.3,-hh*0.95,L*0.02,-hh*1.02);
+  c.lineTo(-L*0.28,-hh*0.9); c.quadraticCurveTo(-L*0.4,-hh*0.7,-L*0.44,-hh*0.35);
+  c.lineTo(-L*0.44,hh*0.35); c.quadraticCurveTo(-L*0.4,hh*0.7,-L*0.28,hh*0.9);
+  c.lineTo(L*0.02,hh*1.02); c.quadraticCurveTo(L*0.3,hh*0.9,L*0.52,hh*0.2);
+  c.closePath(); c.fill();
+  // Belly
+  c.fillStyle=belly; c.beginPath(); c.ellipse(L*0.04,hh*0.45,L*0.4,hh*0.45,0,0,Math.PI*2); c.fill();
+  if(sil) return;
+  // Pectoral fin over the belly
+  c.fillStyle=fin; c.beginPath(); c.moveTo(L*0.22,hh*0.45); c.lineTo(L*0.1,hh*1.1); c.lineTo(L*0.3,hh*0.8); c.closePath(); c.fill();
+  // Dark vertical bars, long and short by turns, leaning back a touch
+  c.fillStyle=bars; c.globalAlpha=0.9;
+  for(let i=-3;i<=4;i++){
+    const x=i*L*0.085-L*0.06, h=(i%2?hh*1.35:hh*0.95), w=Math.max(1.2,L*0.028);
+    c.save(); c.translate(x,-hh*0.95); c.rotate(-0.14); c.fillRect(-w/2,0,w,h); c.restore();
+  }
+  c.globalAlpha=1;
+  // Speckles on the fins and tail
+  c.fillStyle=finDark;
+  [[-L*0.27,-hh*1.15],[-L*0.18,-hh*1.0],[-L*0.27,hh*1.1],[-L*0.18,hh*0.98],[-L*0.52,-hh*0.7],[-L*0.52,hh*0.7],[-L*0.46,-hh*0.2],[-L*0.46,hh*0.25]].forEach(([px,py])=>{ c.beginPath(); c.arc(px,py,Math.max(0.8,L*0.012),0,Math.PI*2); c.fill(); });
+  // Shine along the back
+  c.strokeStyle='rgba(255,255,255,.4)'; c.lineWidth=Math.max(1,L*0.012); c.beginPath(); c.moveTo(L*0.3,-hh*0.72); c.quadraticCurveTo(0,-hh*0.9,-L*0.3,-hh*0.72); c.stroke();
+  // Gill line
+  c.strokeStyle=bars; c.lineWidth=Math.max(1,L*0.01); c.beginPath(); c.arc(L*0.2,0,hh*0.9,-Math.PI*0.42,Math.PI*0.42); c.stroke();
+  // Long jaw with teeth
+  c.beginPath(); c.moveTo(L*0.52,hh*0.08); c.lineTo(L*0.22,hh*0.32); c.stroke();
+  c.fillStyle='#fff'; for(let i=0;i<5;i++){ const tx=L*0.26+i*L*0.055, ty=hh*0.28-i*hh*0.045; c.beginPath(); c.moveTo(tx,ty); c.lineTo(tx+L*0.012,ty-hh*0.3); c.lineTo(tx+L*0.024,ty); c.closePath(); c.fill(); }
+  // Gold eye
+  c.fillStyle='#f2c14e'; c.beginPath(); c.arc(L*0.36,-hh*0.32,Math.max(1.8,L*0.05),0,Math.PI*2); c.fill();
+  c.fillStyle='#111'; c.beginPath(); c.arc(L*0.37,-hh*0.32,Math.max(0.9,L*0.024),0,Math.PI*2); c.fill();
 }
 function paintFishOn(cv,sp,len,opts){
   const c=cv.getContext('2d'); c.clearRect(0,0,cv.width,cv.height);
@@ -1205,7 +1254,7 @@ function updateFight(){
   bobber.x=clamp(bobber.x+(sh.dir*18*away-(pressed?34*(1-F.tension*0.5):0))*dt,dockX+12,W-8);
   if(bobber.x<=dockX+12&&F.prog<0.98) F.prog=Math.max(F.prog,0.98);
   lure.x=bobber.x+sh.dir*8; lure.y=lerp(lure.y,BANDS[sh.d][0]+(1-F.prog)*30,dt*2);
-  sh.x=lure.x+sh.dir*(FISH[sh.sp].shape==='pike'?10:6); sh.y=lure.y+3;
+  sh.x=lure.x+sh.dir*(FISH[sh.sp].shape==='pike'||FISH[sh.sp].shape==='muskie'?10:6); sh.y=lure.y+3;
   bobber.dip=4+Math.sin(time*14)*(running?4:2);
   if(Math.random()<dt*(running?10:3)) splashAt(bobber.x,2,false);
   // Meters
