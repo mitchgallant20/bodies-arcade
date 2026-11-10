@@ -301,6 +301,33 @@
    },
    "near": null,
    "waterline": 0
+  },
+  "wabigoon": {
+   "far": {
+    "src": "lakes/wabigoon-far.png",
+    "w": 1920,
+    "h": 240
+   },
+   "near": null,
+   "waterline": 0
+  },
+  "clearwater": {
+   "far": {
+    "src": "lakes/clearwater-far.png",
+    "w": 1920,
+    "h": 240
+   },
+   "near": null,
+   "waterline": 0
+  },
+  "ice": {
+   "far": {
+    "src": "lakes/ice-far.png",
+    "w": 1920,
+    "h": 240
+   },
+   "near": null,
+   "waterline": 0
   }
  }
 }

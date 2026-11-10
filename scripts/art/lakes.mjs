@@ -66,6 +66,34 @@ ${[[160, 60], [420, 44], [640, 70], [880, 50]].map(([x, w]) => `<ellipse cx="${x
 <!-- a cabin on the big island with a light on -->
 <g transform="translate(420 0)"><rect x="-10" y="${H - 20}" width="22" height="12" fill="#4a3220"/><path d="M-13 ${H - 20} L1 ${H - 29} L15 ${H - 20} Z" fill="#2a1c10"/><rect x="-4" y="${H - 17}" width="5" height="5" fill="${T.light}"/></g>
 ${birds(4, 26)}`,
+  wabigoon: () => `${hills(34, 24, T.far, 0.01, 0.9)}${hills(20, 10, T.mid, 0.018, 2.2)}
+${treeline(H, 60, 18, 34, T.near, 0.15)}
+<!-- islands -->
+${[[120, 50], [300, 36], [700, 60], [900, 40]].map(([x, w]) => `<ellipse cx="${x}" cy="${H}" rx="${w}" ry="9" fill="${T.near}"/>${[-0.6, -0.2, 0.3, 0.7].map((k) => conifer(x + k * w, H - 5, 16 + Math.abs(k) * 8, T.near)).join("")}`).join("")}
+<!-- the lodge with its dock -->
+<g transform="translate(420 0)"><rect x="-22" y="${H - 26}" width="44" height="18" fill="#5a3a22"/><path d="M-26 ${H - 26} L0 ${H - 40} L26 ${H - 26} Z" fill="#2e2016"/><rect x="-14" y="${H - 22}" width="8" height="7" fill="${T.light}"/><rect x="-4" y="${H - 17}" width="8" height="5" fill="${T.light}"/><rect x="6" y="${H - 22}" width="8" height="7" fill="${T.light}"/><rect x="-30" y="${H - 7}" width="70" height="3" fill="${T.wood}"/></g>
+<!-- a float plane at the dock -->
+<g transform="translate(470 0)"><rect x="-16" y="${H - 16}" width="34" height="7" rx="3" fill="#e8c64a"/><rect x="-6" y="${H - 20}" width="14" height="6" rx="2" fill="#e8c64a"/><rect x="-22" y="${H - 13}" width="48" height="2" fill="#3a3a44"/><rect x="-20" y="${H - 7}" width="18" height="3" rx="1.5" fill="#cfd4dc"/><rect x="2" y="${H - 7}" width="18" height="3" rx="1.5" fill="#cfd4dc"/><rect x="14" y="${H - 26}" width="2" height="12" fill="#e8c64a"/><path d="M15 ${H - 26} L22 ${H - 22} L15 ${H - 18} Z" fill="#c0392b"/></g>
+${birds(3, 26)}`,
+  clearwater: () => `${hills(28, 26, T.far, 0.011, 1.8)}
+<!-- limestone cliffs, the Caves -->
+<path d="M300 ${H} L300 ${H - 26} L340 ${H - 40} L400 ${H - 34} L450 ${H - 46} L520 ${H - 38} L560 ${H - 22} L600 ${H - 30} L${W} ${H - 24} L${W} ${H} Z" fill="#d9d2c4"/>
+<path d="M340 ${H - 40} L400 ${H - 34} L392 ${H - 8} L350 ${H - 4} Z" fill="#b5ac9c" opacity=".7"/><path d="M450 ${H - 46} L520 ${H - 38} L506 ${H - 6} L462 ${H - 4} Z" fill="#b5ac9c" opacity=".6"/>
+<path d="M360 ${H - 4} q 8 -14 16 0 z" fill="#5a5048"/><path d="M470 ${H - 4} q 10 -18 20 0 z" fill="#5a5048"/>
+${hills(14, 8, T.mid, 0.02, 0.4)}
+${treeline(H, 48, 20, 38, T.near, 0.05)}
+${[330, 410, 480, 540, 620, 760, 880].map((x) => conifer(x, H - 32, 24, T.near)).join("")}
+<!-- a pale beach by the dock side -->
+<path d="M0 ${H} L0 ${H - 6} Q 80 ${H - 9} 180 ${H - 3} L 220 ${H} Z" fill="#e6dcc6"/>
+${birds(2, 22)}`,
+  ice: () => `<path d="M0 ${H} L0 ${H - 40} ${Array.from({ length: 49 }, (_, i) => `L${i * 20} ${(H - 22 - Math.abs(Math.sin(i * 0.37)) * 26).toFixed(1)}`).join(" ")} L${W} ${H} Z" fill="#e9f1f8"/>
+<path d="M0 ${H} L0 ${H - 20} ${Array.from({ length: 49 }, (_, i) => `L${i * 20} ${(H - 10 - Math.abs(Math.sin(i * 0.53 + 2)) * 14).toFixed(1)}`).join(" ")} L${W} ${H} Z" fill="#c5d6e4"/>
+${Array.from({ length: 64 }, (_, i) => { const x = i * 15 + ((i * 7) % 9), h = 16 + ((i * 11) % 14); return `${conifer(x, H, h, "#1b2a3a")}<path d="M${x - h * 0.12} ${H - h * 0.62} L${x} ${H - h} L${x + h * 0.12} ${H - h * 0.62} Z" fill="#f4f9ff"/>`; }).join("")}
+<!-- a far shack with smoke -->
+<g transform="translate(360 0)"><rect x="-10" y="${H - 20}" width="22" height="14" fill="#b8402a"/><path d="M-13 ${H - 20} L1 ${H - 28} L15 ${H - 20} Z" fill="#f4f9ff"/><rect x="-4" y="${H - 16}" width="5" height="5" fill="${T.light}"/><rect x="6" y="${H - 34}" width="3" height="8" fill="#333"/><circle cx="8" cy="${H - 38}" r="3" fill="rgba(255,255,255,.6)"/><circle cx="11" cy="${H - 44}" r="4" fill="rgba(255,255,255,.4)"/></g>
+<!-- a snowmobile track -->
+<path d="M40 ${H - 2} Q 200 ${H - 6} 330 ${H - 2}" stroke="#b7c9d8" stroke-width="2" fill="none" stroke-dasharray="6 4"/>
+${birds(1, 30)}`,
 };
 for (const [id, fn] of Object.entries(LAKES)) {
   seed = id.length * 31 + 7;

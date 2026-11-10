@@ -2,8 +2,8 @@
 // the game loads. Source art is SVG (authored in world units: 1 unit = 1 world pixel) or a PNG
 // dropped in beside the SVG with the same name, which wins. Everything renders at SCALE x so it
 // stays crisp on a 2x or 3x phone. Run: node scripts/render-sprites.mjs
-import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, rmSync } from "node:fs";
-import { join, dirname, basename, extname } from "node:path";
+import { readFileSync, writeFileSync, mkdirSync, existsSync, rmSync } from "node:fs";
+import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import sharp from "sharp";
 

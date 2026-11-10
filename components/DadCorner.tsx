@@ -152,6 +152,8 @@ function readProgress() {
   for (const l of LISTS) shootoutBest[l.id] = Number(getItem(`bb:gbest:${l.id}`) ?? 0) || 0;
   const booksFinished = keysWithPrefix("bb:done:").reduce((n, k) => n + (Number(getItem(k) ?? 0) || 0), 0);
   return {
+    bigCatchWords: getJSON<Record<string, { right: number; wrong: number; streak: number; last: number }>>("bbc_words", {}),
+    bigCatchJar: getJSON<{ bait?: number; jars?: number; words?: number }>("bbc_save", {}),
     turtlesBest: Number(getItem("bpt_best") ?? 0) || 0,
     shootoutGames: Number(getItem("bb:games") ?? 0) || 0,
     shootoutBest,
@@ -203,6 +205,44 @@ function Today() {
   );
 }
 
+function BigCatchWords({ words, jar }: { words: Record<string, { right: number; wrong: number; streak: number; last: number }>; jar: { bait?: number; jars?: number; words?: number } }) {
+  const entries = Object.entries(words);
+  if (!entries.length) return (
+    <div className="card">
+      <h2>Big Catch, word mode</h2>
+      <p>Nothing yet. Turn on word mode in the fishing game (pause menu) and he hears a sight word on every bite.</p>
+      <div className="row"><a className="btn small" href={withBase("/play/big-catch.html#reading")}>BIG CATCH, WORD MODE</a></div>
+    </div>
+  );
+  const right = entries.reduce((n, [, v]) => n + (v.right || 0), 0);
+  const wrong = entries.reduce((n, [, v]) => n + (v.wrong || 0), 0);
+  // Recency is read from the newest record, not the clock, so this stays pure during render
+  const newest = entries.reduce((n, [, v]) => Math.max(n, v.last || 0), 0);
+  const week = newest - 7 * 86400000;
+  const missed = entries.filter(([, v]) => (v.wrong || 0) > 0 && v.last > week && (v.streak || 0) < 2).sort((a, b) => (b[1].wrong || 0) - (a[1].wrong || 0)).map(([w]) => w);
+  const solid = entries.filter(([, v]) => (v.streak || 0) >= 3).map(([w]) => w);
+  return (
+    <div className="card">
+      <h2>Big Catch, word mode</h2>
+      <div className="tiles">
+        <div className="tile"><span className="n">{right}</span><span className="l">words right</span></div>
+        <div className="tile"><span className="n">{wrong}</span><span className="l">misses</span></div>
+        <div className="tile"><span className="n">{jar.jars ?? 0}</span><span className="l">bait jars filled</span></div>
+        <div className="tile"><span className="n">{jar.bait ?? 0}/10</span><span className="l">worms in the jar</span></div>
+      </div>
+      {missed.length > 0 && (<>
+        <p style={{ margin: "10px 0 6px" }}>Missed this week, coming back soon in the game:</p>
+        <div className="words">{missed.slice(0, 24).map((w) => <span key={w} className="s1">{w}</span>)}</div>
+      </>)}
+      {solid.length > 0 && (<>
+        <p style={{ margin: "10px 0 6px" }}>Solid in the game (three right in a row):</p>
+        <div className="words">{solid.slice(0, 40).map((w) => <span key={w} className="s3">{w}</span>)}</div>
+      </>)}
+      <p className="fine" style={{ textAlign: "left" }}>Words come from the same lists as the books. He hears a word on each bite and taps the match; after a catch he can spell the fish. Fishing never writes to the book stars.</p>
+    </div>
+  );
+}
+
 function Words() {
   const { p } = useProgress();
   if (!p) return null;
@@ -226,6 +266,7 @@ function Words() {
           </details>
         );
       })}
+      <BigCatchWords words={p.bigCatchWords} jar={p.bigCatchJar} />
       <p className="fine">Gold = read first try on three different days (the legacy star rule). Modality mix and the practice pile come with the engine.</p>
     </section>
   );

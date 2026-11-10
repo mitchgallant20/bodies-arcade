@@ -130,4 +130,20 @@ wrap("bodies-books.html", "#eaf2f8", (body) => {
 // New cabinets written for the arcade (not legacy ports) live in games/<id>/*.html as the same
 // kind of fragment (title, style, markup, script) and get the same wrapper, so they share the
 // fonts, safe areas and HOME behaviour. They already carry their own data-home links.
-wrap("big-catch.html", "#150f30", (body) => body, "", join(root, "games", "fishing"));
+// Big Catch's word mode uses the app's word lists. Pull them out of lib/engine/lists.ts (the TS
+// stays the source of truth) and inline them where the page leaves placeholders.
+function wordLists() {
+  const ts = readFileSync(join(root, "lib", "engine", "lists.ts"), "utf8");
+  const lists = [];
+  const re = /id:\s*"(\w+)",\s*name:\s*"([^"]+)",\s*sub:\s*"([^"]+)",\s*order:\s*(\d+),\s*words:\s*split\(\s*"([^"]+)"/g;
+  let m;
+  while ((m = re.exec(ts))) lists.push({ id: m[1], name: m[2], sub: m[3], order: Number(m[4]), words: m[5].trim().split(/\s+/) });
+  const cg = ts.match(/CONFUSABLE_GROUPS[^=]*=\s*\[([\s\S]*?)\n\];/);
+  const groups = cg ? [...cg[1].matchAll(/\[([^\]]+)\]/g)].map((g) => [...g[1].matchAll(/"([^"]+)"/g)].map((x) => x[1])) : [];
+  if (!lists.length) throw new Error("adapt-legacy: no word lists found in lib/engine/lists.ts");
+  return { lists, groups };
+}
+const WL = wordLists();
+wrap("big-catch.html", "#150f30", (body) => body
+  .replace("/*__WORD_LISTS__*/[]", JSON.stringify(WL.lists))
+  .replace("/*__CONFUSABLES__*/[]", JSON.stringify(WL.groups)), "", join(root, "games", "fishing"));
