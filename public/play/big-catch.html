@@ -193,6 +193,9 @@ canvas#scene{position:absolute;inset:0;width:100%;height:100%;display:block}
 .item .sub{font-size:13px;color:var(--muted);line-height:1.2}
 .item .pr{font-family:var(--display);font-size:9px;color:var(--warn)}
 .item .pr.have{color:var(--good)}
+.item.rare{border-color:var(--warn);background:linear-gradient(180deg,#2a1f55,#1b1444)}
+.item .chips.earn{gap:4px;margin-top:2px}
+.item .chips.earn .chip-s{font-size:11px;padding:2px 7px}
 .mini{font-family:var(--display);font-size:9px;color:#1d1538;background:var(--warn);border:0;border-radius:8px;padding:9px 12px;min-height:36px;min-width:72px;cursor:pointer;box-shadow:0 4px 0 #a9820f;touch-action:manipulation}
 .mini.use{background:var(--good);box-shadow:0 4px 0 #1f7a33}
 .mini.ghost{background:#3b2b86;color:#fff;box-shadow:0 4px 0 #1b1340}
@@ -813,6 +816,10 @@ const LURES=[
   {id:'stink', name:'Stink Bait', sub:'Deep. Catfish and carp.', price:260, depth:2, ico:'🧀'},
   {id:'glow', name:'Glow Jig', sub:'Deep. Night fish.', price:350, depth:2, ico:'🔦'},
   {id:'sucker', name:'Big Sucker', sub:'Middle. Muskie and trout.', price:600, depth:1, ico:'🐡'},
+  // The Wizard Rig: the ultimate lure. Never sold; it is earned by finishing every word badge. A
+  // spinner blade over a two-hook pickerel spreader with a sinker. It spins through the whole
+  // water column, every fish treats it as a favourite, and the blade flashes at night.
+  {id:'wizard', name:'Wizard Rig', sub:'Spins and shines. Every fish wants it, deep or shallow.', price:0, depth:1, ico:'🪄', earned:'words', allDepths:true},
 ];
 const EXTRAS=[
   {id:'hat', name:'Lucky Hat', sub:'More bites.', price:150, ico:'🧢'},
@@ -854,6 +861,15 @@ function tierOf(sp,len){ const f=FISH[sp]; const k=(len-f.min)/(f.max-f.min); le
 const rodById=id=>RODS.find(r=>r.id===id)||RODS[0];
 const reelById=id=>REELS.find(r=>r.id===id)||REELS[0];
 const lureById=id=>LURES.find(r=>r.id===id)||LURES[0];
+// Earned gear: the badges that hand it over. The Wizard Rig takes every word mode badge.
+const WORD_BADGES=['words10','words50','jar1','jar5'];
+const earnNeeds=g=>g.earned==='words'?WORD_BADGES:[];
+const earnedOk=g=>earnNeeds(g).every(id=>S.badges.includes(id));
+// How much a fish wants a lure. The Wizard Rig is at least as good as the fish's favourite.
+function lureWant(f,L){
+  if(L.id==='wizard') return Math.max(1.6,...Object.values(f.lures))+0.2;
+  return f.lures[L.id]||0.45;
+}
 
 // ---------- Content: badges ----------
 const BADGES=[
@@ -1006,7 +1022,7 @@ function addBait(n){
   S.bait=(S.bait||0)+n;
   if(S.bait>=JAR){
     S.bait-=JAR; S.jars=(S.jars||0)+1;
-    const missing=LURES.filter(l=>!S.lures.includes(l.id));
+    const missing=LURES.filter(l=>!l.earned&&!S.lures.includes(l.id));
     if(missing.length){ const l=pick(missing); S.lures.push(l.id); pop(W/2,H*0.45,'FULL JAR! FREE '+l.name.toUpperCase()+'!','good'); }
     else { S.coins+=60; pop(W/2,H*0.45,'FULL JAR! +60 COINS','good'); }
     Audio.badge(); checkBadges();
@@ -1516,6 +1532,37 @@ function drawRod(pose,hx,hy){
   if(pose==='fight'&&pressed){ ctx.strokeStyle='#ddd'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(hx+2,hy+4); ctx.lineTo(hx+2+Math.cos(time*20)*4,hy+4+Math.sin(time*20)*4); ctx.stroke(); }
   rodTip={x:tx,y:ty};
 }
+// The Wizard Rig in the water: a swivel, a spinner blade turning on the wire (gold one side,
+// silver the other), a pickerel spreader with a red bead and hook on one arm and a chartreuse
+// bead and hook on the other, and a bell sinker underneath. (x,y) is the hook line.
+function drawWizardRig(x,y){
+  ctx.save();
+  ctx.lineCap='round';
+  // Wire: swivel down to the spreader, the two arms, and the sinker drop
+  ctx.strokeStyle='rgba(230,235,245,.85)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(x,y-13); ctx.lineTo(x,y-3); ctx.moveTo(x,y-3); ctx.quadraticCurveTo(x-5,y-3,x-9,y); ctx.moveTo(x,y-3); ctx.quadraticCurveTo(x+5,y-3,x+9,y); ctx.moveTo(x,y-3); ctx.lineTo(x,y+5); ctx.stroke();
+  ctx.strokeStyle='rgba(200,205,215,.9)'; ctx.beginPath(); ctx.arc(x,y-14,1.6,0,Math.PI*2); ctx.stroke();
+  // Sinker
+  ctx.fillStyle='#8a8f99'; ctx.beginPath(); ctx.moveTo(x,y+4); ctx.quadraticCurveTo(x+3,y+7,x,y+9.5); ctx.quadraticCurveTo(x-3,y+7,x,y+4); ctx.fill();
+  // Droppers, beads and hooks
+  for(const [ax,bead] of [[x-9,'#ff4a3d'],[x+9,'#c8ff3d']]){
+    ctx.strokeStyle='rgba(230,235,245,.85)'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(ax,y); ctx.lineTo(ax,y+3); ctx.stroke();
+    ctx.fillStyle=bead; ctx.beginPath(); ctx.arc(ax,y+3.5,1.8,0,Math.PI*2); ctx.fill();
+    // J hook: shank down from the bead, bend, and the point coming back up
+    ctx.strokeStyle='#e8ecf2'; ctx.lineWidth=1.1; ctx.beginPath(); ctx.moveTo(ax,y+5); ctx.lineTo(ax,y+7.5); ctx.arc(ax+1.8,y+7.5,1.8,Math.PI,0,true); ctx.lineTo(ax+3.6,y+6); ctx.stroke();
+  }
+  // Blade: a willow leaf spinning on the wire, so its width breathes with the turn
+  const spin=Math.cos(time*13), front=spin>=0;
+  const rx=Math.max(0.5,Math.abs(spin))*3.2, cy=y-8;
+  ctx.fillStyle=front?'#ffd23f':'#e9ecf2';
+  ctx.beginPath(); ctx.ellipse(x,cy,rx,5,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,.55)'; ctx.beginPath(); ctx.ellipse(x-rx*0.3,cy-1.5,rx*0.35,2,0,0,Math.PI*2); ctx.fill();
+  // The flash: a glint each turn, and a soft glow at night so it works like a glow jig
+  const glint=(time*13/Math.PI)%2;
+  if(glint<0.25){ const g=1-glint/0.25; ctx.strokeStyle='rgba(255,255,255,'+(0.9*g)+')'; ctx.lineWidth=1.2; const r=4+6*g; ctx.beginPath(); ctx.moveTo(x-r,cy); ctx.lineTo(x+r,cy); ctx.moveTo(x,cy-r); ctx.lineTo(x,cy+r); ctx.stroke(); }
+  if(dayT()>1){ ctx.fillStyle='rgba(255,226,120,.2)'; ctx.beginPath(); ctx.arc(x,cy,12,0,Math.PI*2); ctx.fill(); }
+  ctx.restore();
+}
 function drawLine(){
   if(state==='title'||state==='idle'||state==='charge'||state==='daydone'||state==='menu'||state==='land'||state==='card'){
     if(state==='charge'&&isIce()){
@@ -1549,9 +1596,12 @@ function drawLine(){
   ctx.stroke();
   // Lure
   const L=lureById(S.lure);
-  ctx.fillStyle={worm:'#d26a6a',spinner:'#ffe28a',spoon:'#e0e0e0',jig:'#ff8a3d',crank:'#5fd3ff',frog:'#6fcf5f',stink:'#c9a54a',glow:'#b8ffb0',sucker:'#c8a070'}[L.id]||'#fff';
-  ctx.beginPath(); ctx.ellipse(lure.x,lure.y,4,2.5,0,0,Math.PI*2); ctx.fill();
-  if(L.id==='glow'&&dayT()>1){ ctx.fillStyle='rgba(184,255,176,.25)'; ctx.beginPath(); ctx.arc(lure.x,lure.y,10,0,Math.PI*2); ctx.fill(); }
+  if(L.id==='wizard') drawWizardRig(lure.x,lure.y);
+  else {
+    ctx.fillStyle={worm:'#d26a6a',spinner:'#ffe28a',spoon:'#e0e0e0',jig:'#ff8a3d',crank:'#5fd3ff',frog:'#6fcf5f',stink:'#c9a54a',glow:'#b8ffb0',sucker:'#c8a070'}[L.id]||'#fff';
+    ctx.beginPath(); ctx.ellipse(lure.x,lure.y,4,2.5,0,0,Math.PI*2); ctx.fill();
+    if(L.id==='glow'&&dayT()>1){ ctx.fillStyle='rgba(184,255,176,.25)'; ctx.beginPath(); ctx.arc(lure.x,lure.y,10,0,Math.PI*2); ctx.fill(); }
+  }
   // Bobber (open water only; on the ice the tip-up flag does the talking)
   if(state!=='cast'&&!isIce()){
     const by=bobber.y+bobber.dip;
@@ -1774,17 +1824,18 @@ function planBite(){
   for(const s of shadows){
     if(s.hooked||s.chasing) continue;
     const f=FISH[s.sp];
-    let w=(f.lures[L.id]||0.45)*(f.time[slot]||1.0);
+    let w=lureWant(f,L)*(f.time[slot]||1.0);
     if(f.weather) w*=(f.weather[wx]||1.0);
-    const dd=Math.abs(s.d-lure.depth); w*=dd===0?1:dd===1?0.35:0.08;
+    // The Wizard Rig spins through the whole column, so depth hardly matters to it.
+    const dd=Math.abs(s.d-lure.depth); w*=L.allDepths?(dd===2?0.7:1):dd===0?1:dd===1?0.35:0.08;
     const dist=Math.abs(s.x-lure.x); w*=1/(1+(dist/110)*(dist/110));
     cands.push({s,w});
   }
   const sum=cands.reduce((a,c)=>a+c.w,0);
   // Bite chance: more fish that like this lure nearby, more bites. Lucky hat helps. Night is slow
-  // unless the lure glows or stinks.
-  let chance=0.55+Math.min(0.35,sum*0.12)+(S.extras.includes('hat')?0.08:0);
-  if(slot==='night'&&L.id!=='glow'&&L.id!=='stink') chance-=0.12;
+  // unless the lure glows, stinks or flashes.
+  let chance=0.55+Math.min(0.35,sum*0.12)+(S.extras.includes('hat')?0.08:0)+(L.id==='wizard'?0.1:0);
+  if(slot==='night'&&L.id!=='glow'&&L.id!=='stink'&&L.id!=='wizard') chance-=0.12;
   chance=clamp(chance,0.5,0.95);
   bitePending=null;
   if(Math.random()<chance&&cands.length){
@@ -1794,8 +1845,9 @@ function planBite(){
     bitePending={sp:s.sp,len:s.len,shadow:s};
   }
   waitT=0;
-  // A far-off fish takes longer to get there.
-  const until=bitePending?clamp(1.6+Math.abs(bitePending.shadow.x-lure.x)/90,2.2,6.5):rnd(5,8);
+  // A far-off fish takes longer to get there. They rush the Wizard Rig.
+  const rush=L.id==='wizard'?0.7:1;
+  const until=bitePending?clamp((1.6+Math.abs(bitePending.shadow.x-lure.x)/90)*rush,2.2*rush,6.5):rnd(5,8)*rush;
   biteAt=until;
   nibbleAt=[]; const nn=ri(0,2); for(let i=0;i<nn;i++) nibbleAt.push(rnd(1.0,until-0.8));
   nibbleAt.sort((a,b)=>a-b);
@@ -2018,10 +2070,25 @@ function checkBadges(){
   for(const b of BADGES){ if(!S.badges.includes(b.id)&&b.test(st)){ S.badges.push(b.id); won.push(b); } }
   if(won.length){
     if(day) day.badges.push(...won.map(b=>b.id));
+    const earned=grantEarned();
     persist(); updateHud();
-    let i=0; const show=()=>{ if(i>=won.length) return; const b=won[i++]; Audio.badge(); pop(W/2,H*0.55,b.ico+' '+b.name.toUpperCase(),'good'); setTimeout(show,900); };
+    let i=0; const show=()=>{
+      if(i>=won.length){ for(const l of earned){ Audio.bigJingle(); pop(W/2,H*0.45,l.ico+' YOU EARNED THE '+l.name.toUpperCase()+'!','good'); } return; }
+      const b=won[i++]; Audio.badge(); pop(W/2,H*0.55,b.ico+' '+b.name.toUpperCase(),'good'); setTimeout(show,900);
+    };
     setTimeout(show,300);
   }
+}
+// Hand over earned gear once its badges are all in. Returns what was just handed over, so the
+// caller can announce it after the badge pops; at boot nothing is announced.
+function grantEarned(){
+  const got=[];
+  for(const l of LURES){
+    if(!l.earned||S.lures.includes(l.id)||!earnedOk(l)) continue;
+    S.lures.push(l.id); got.push(l);
+  }
+  if(got.length){ persist(); $('shopBtn').classList.add('alert'); }
+  return got;
 }
 
 // ---------- Day end ----------
@@ -2256,13 +2323,17 @@ function renderShop(){
     const have=owns(it);
     const inUse=(shopTab==='lure'&&S.lure===it.id)||(shopTab==='rod'&&S.rod===it.id)||(shopTab==='reel'&&S.reel===it.id)||((shopTab==='extra'||shopTab==='boat')&&have)||(shopTab==='look'&&(OUTFITS.includes(it)?S.outfit===it.id:have));
     const prev=(shopTab==='rod'||shopTab==='reel')?idx>0&&!owns(list[idx-1]):false;
-    const el=document.createElement('div'); el.className='item'+(inUse?' on':'')+(prev?' locked':'');
-    let action='';
-    if(shopTab==='extra'||shopTab==='boat'||(shopTab==='look'&&LOOKS.includes(it))) action=have?'<span class="pr have">OWNED</span>':'<button class="mini" type="button" data-buy '+(S.coins<it.price?'disabled':'')+'>BUY</button>';
+    const el=document.createElement('div'); el.className='item'+(inUse?' on':'')+(prev?' locked':'')+(it.earned?' rare':'');
+    let action='', price=have?'':'<span class="pr">'+it.price+' COINS</span>';
+    if(it.earned&&!have){
+      // Earned gear is never for sale: show which badges it takes and how many are in
+      const chips=earnNeeds(it).map(id=>{ const b=BADGES.find(x=>x.id===id); const ok=S.badges.includes(id); return '<span class="chip-s '+(ok?'ok':'no')+'">'+b.ico+' '+b.name+'</span>'; }).join('');
+      price='<span class="pr">EARN IT</span><span class="sub">Get all 4 word badges.</span><span class="chips earn">'+chips+'</span>';
+    }
+    else if(shopTab==='extra'||shopTab==='boat'||(shopTab==='look'&&LOOKS.includes(it))) action=have?'<span class="pr have">OWNED</span>':'<button class="mini" type="button" data-buy '+(S.coins<it.price?'disabled':'')+'>BUY</button>';
     else if(have) action=inUse?'<span class="pr have">USING</span>':(shopTab==='lure'||shopTab==='look'?'<button class="mini use" type="button" data-use>USE</button>':'<span class="pr have">OWNED</span>');
     else action='<button class="mini" type="button" data-buy '+(S.coins<it.price||prev?'disabled':'')+'>BUY</button>';
-    el.innerHTML='<span class="ico" aria-hidden="true">'+it.ico+'</span><span class="nm">'+it.name+'</span><span class="sub">'+it.sub+'</span>'+
-      (have?'':'<span class="pr">'+it.price+' COINS</span>')+action;
+    el.innerHTML='<span class="ico" aria-hidden="true">'+it.ico+'</span><span class="nm">'+it.name+'</span><span class="sub">'+it.sub+'</span>'+price+action;
     el.querySelector('[data-buy]')?.addEventListener('click',()=>buy(it));
     el.querySelector('[data-use]')?.addEventListener('click',()=>use(it));
     g.appendChild(el);
@@ -2535,6 +2606,7 @@ function frame(ts){
   if(canSpeak()){ try{ speechSynthesis.getVoices(); speechSynthesis.addEventListener('voiceschanged',()=>speechSynthesis.getVoices()); }catch(e){} }
   if(S.total>0){ $('bestTitle').textContent=S.total+' FISH · BIGGEST '+Math.round(S.bigcm)+' CM'+(S.bigsp?' '+FISH[S.bigsp].name.toUpperCase():''); }
   showFotdTitle();
+  grantEarned();
   updateHud(); spawnShadows();
   setAct('PLAY','tap to start');
   requestAnimationFrame(frame);
