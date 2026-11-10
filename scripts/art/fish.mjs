@@ -19,6 +19,7 @@ const SP = {
   crappie:   { hh: 18, head: "point", tail: "fork", dorsal: "spiny", top: "#4a5a66", mid: "#a9b4bc", belly: "#eef2f5", fin: "#6a7a86", iris: "#e8e8e8", mark: "speckle", markCol: "#1d2a33" },
   bullhead:  { hh: 12, head: "flat", tail: "round", dorsal: "small", top: "#3a3a2c", mid: "#5a5a46", belly: "#d2caa0", fin: "#3a3a2c", iris: "#d8d8d8", mark: "mottle", markCol: "#262620", whiskers: 4 },
   walleye:   { hh: 12, head: "point", tail: "fork", dorsal: "spiny", top: "#55601c", mid: "#c0a648", belly: "#f3e8b8", fin: "#b89a48", iris: "#f0f0e0", mark: "saddles", markCol: "#4e4616", whitetip: true },
+  greenback: { hh: 12, head: "point", tail: "fork", dorsal: "spiny", top: "#146b4e", mid: "#3da46e", belly: "#eef6e4", fin: "#5fae7c", iris: "#f0f0e0", mark: "saddles", markCol: "#0f4a38", whitetip: true },
   sauger:    { hh: 11, head: "point", tail: "fork", dorsal: "spiny", top: "#4e4c2a", mid: "#9a955c", belly: "#e8e2b8", fin: "#8a8450", iris: "#e8e8d8", mark: "blotch", markCol: "#3a3820", spotdorsal: true },
   pike:      { hh: 10, head: "flat", tail: "round", dorsal: "back", top: "#2f5a1e", mid: "#5d8a3c", belly: "#dbe6aa", fin: "#6d7f3a", iris: "#f2c14e", mark: "beans", markCol: "#e9f0b8", teeth: true },
   catfish:   { hh: 13, head: "flat", tail: "fork", dorsal: "small", top: "#3e4c55", mid: "#5c6a72", belly: "#d9dedc", fin: "#3e4c55", iris: "#c8c8c8", mark: "none", whiskers: 6 },

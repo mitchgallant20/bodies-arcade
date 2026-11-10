@@ -616,6 +616,8 @@ const FISH={
   crappie: {name:'Crappie',      min:15,max:40, ma:33, c:0.030, rarity:2, depth:[1],   lures:{jig:1.5,worm:1.1}, time:{dawn:1.3,dusk:1.3}, shape:'sunfish', col:'#9aa7b0', belly:'#e8eef2', stripe:'#2f3d48', fight:0.5},
   bullhead:{name:'Bullhead',     min:15,max:40, ma:33, c:0.032, rarity:2, depth:[2],   lures:{worm:1.4,stink:1.6}, time:{night:1.6,dusk:1.2}, shape:'catfish', col:'#4a4a3a', belly:'#c9c29a', stripe:'#2a2a20', fight:0.6},
   walleye: {name:'Walleye',      min:25,max:85, ma:71, c:0.022, rarity:2, depth:[1,2], lures:{jig:1.5,crank:1.3,spinner:1.1,glow:1.4}, time:{dawn:1.5,dusk:1.6,night:1.4,day:0.7}, weather:{rain:1.4,cloud:1.3}, shape:'walleye', col:'#b8a24a', belly:'#f0e6b0', stripe:'#6d5c1c', fight:0.8},
+  // The Lake Winnipeg greenback: a walleye in every way but the colour, emerald over gold, and it lives nowhere else.
+  greenback:{name:'Greenback',   min:25,max:85, ma:71, c:0.022, rarity:3, depth:[1,2], lures:{jig:1.5,crank:1.3,spinner:1.1,glow:1.4}, time:{dawn:1.5,dusk:1.6,night:1.4,day:0.7}, weather:{rain:1.4,cloud:1.3}, shape:'walleye', col:'#2f8a5a', belly:'#eaf3dc', stripe:'#17493a', fight:0.85},
   sauger:  {name:'Sauger',       min:20,max:52, ma:46, c:0.021, rarity:2, depth:[2],   lures:{jig:1.5,crank:1.1}, time:{dusk:1.3,night:1.3}, weather:{cloud:1.2}, shape:'walleye', col:'#8f8a5a', belly:'#e2dcb0', stripe:'#4d4a2a', fight:0.7},
   pike:    {name:'Pike',         min:35,max:122,ma:104,c:0.018, rarity:2, depth:[0,1], lures:{spoon:1.6,frog:1.4,spinner:1.2,sucker:1.3}, time:{day:1.0,dawn:1.2}, weather:{cloud:1.3}, shape:'pike', col:'#5d8a3c', belly:'#d9e6a8', stripe:'#2e4d1c', fight:1.0},
   catfish: {name:'Catfish',      min:30,max:112,ma:88.9,c:0.028,rarity:3, depth:[2],   lures:{stink:1.8,worm:1.2,sucker:1.1}, time:{night:1.6,dusk:1.3,dawn:1.2}, weather:{rain:1.2}, shape:'catfish', col:'#5c6a72', belly:'#d6dbd8', stripe:'#2e3a40', fight:1.2},
@@ -645,8 +647,8 @@ const LAKES=[
   {id:'red', name:'Red River', lbl:'RED RIVER', sub:'Big muddy water. Catfish live here!',
    fish:['catfish','goldeye','carp','sauger','drum','walleye','sucker','bullhead'], bonus:0.08, legend:'catfish', bands:[0,1,2],
    unlock:{fish:12, species:4, coins:150}, water:['#a67a4a','#6e4a2a','#3a2616'], shore:'river', mult:1.3},
-  {id:'winnipeg', name:'Lake Winnipeg', lbl:'LAKE WINNIPEG', sub:'Huge water. Greenback walleye and big pike.',
-   fish:['walleye','pike','whitefish','tullibee','drum','sauger','burbot','sturgeon'], bonus:0.15, legend:'walleye', bands:[0,1,2],
+  {id:'winnipeg', name:'Lake Winnipeg', lbl:'LAKE WINNIPEG', sub:'Huge water. Greenbacks and big pike.',
+   fish:['greenback','pike','whitefish','tullibee','drum','sauger','burbot','sturgeon'], bonus:0.15, legend:'greenback', bands:[0,1,2],
    unlock:{fish:35, species:8, coins:500}, water:['#4fae9a','#1f6f6a','#0d3a3a'], shore:'bigwater', mult:1.6},
   {id:'whiteshell', name:'Whiteshell', lbl:'WHITESHELL', sub:'Clear deep lakes in the rocks. Trout and bass.',
    fish:['smallmouth','laketrout','brook','rainbow','pike','walleye','rockbass','perch'], bonus:0.18, legend:'laketrout', bands:[0,1,2],
@@ -729,6 +731,8 @@ const BADGES=[
   {id:'tenday', ico:'☀️', name:'Full Day', sub:'Catch 10 fish in one day.', test:s=>s.bestDay>=10},
   {id:'cat', ico:'🐱', name:'Catfish King', sub:'Catch a catfish over 80 cm.', test:s=>(s.best.catfish||0)>=80},
   {id:'wall', ico:'🧙', name:'Walleye Wizard', sub:'Catch a walleye over 60 cm.', test:s=>(s.best.walleye||0)>=60},
+  {id:'green', ico:'💚', name:'Greenback', sub:'Catch a Lake Winnipeg greenback.', test:s=>!!s.best.greenback},
+  {id:'greenma', ico:'🟢', name:'Green Master', sub:'A Master Angler greenback.', test:s=>!!s.ma.greenback},
   {id:'pike', ico:'🐊', name:'Pike Pro', sub:'Catch a pike over 90 cm.', test:s=>(s.best.pike||0)>=90},
   {id:'trout', ico:'🏔️', name:'Trout Time', sub:'Catch a lake trout.', test:s=>!!s.best.laketrout},
   {id:'sturg', ico:'🦕', name:'Dinosaur', sub:'Catch a sturgeon.', test:s=>!!s.best.sturgeon},
@@ -767,7 +771,7 @@ function persist(){
 const statsForBadges=()=>({
   total:S.total, bigcm:S.bigcm, maCount:Object.keys(S.ma).length, species:Object.keys(S.best).length,
   unlocked:S.unlocked, flags:S.flags, bestStreak:S.bestStreak, bestDay:S.bestDay, best:S.best,
-  rod:S.rod, lures:S.lures, words:S.words, tier:S.tier, boats:S.boats, fotdCount:S.fotdCount,
+  rod:S.rod, lures:S.lures, words:S.words, tier:S.tier, boats:S.boats, fotdCount:S.fotdCount, ma:S.ma,
 });
 
 // ---------- Reading mode (sight words) ----------
@@ -1640,12 +1644,12 @@ function landFish(){
   fight=null; bitePending=null;
   // The card holds for a moment before anything can close it, longer for the exciting ones, so
   // a kid still tap-reeling cannot flick a Master Angler card away before he has seen it.
-  cardLockMs=big?1800:1000;
+  cardLockMs=big?360:200;
   setTimeout(()=>{
     state='card'; cardOpenedAt=performance.now();
     const box=$('catch').querySelector('.catch-box'); box.classList.add('lock'); $('keepBtn').disabled=true;
-    $('catch').hidden=false; updateHud(); checkBadges(); persist();
     setTimeout(()=>{ if(state!=='card') return; box.classList.remove('lock'); $('keepBtn').disabled=false; try{ $('keepBtn').focus({preventScroll:true}); }catch(e){} },cardLockMs);
+    $('catch').hidden=false; updateHud(); try{ checkBadges(); }catch(e){} persist();
   },reduced?100:500);
 }
 function keepFishing(){

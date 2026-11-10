@@ -38,6 +38,12 @@
    "h": 104,
    "len": 0.93
   },
+  "greenback": {
+   "src": "fish/greenback.png",
+   "w": 240,
+   "h": 104,
+   "len": 0.93
+  },
   "sauger": {
    "src": "fish/sauger.png",
    "w": 240,

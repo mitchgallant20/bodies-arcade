@@ -18,7 +18,7 @@ missing falls back to the drawn version, so you can replace one fish at a time.
 
 | Slot | File | Size (1x units, make PNGs at 2x) | Notes |
 | --- | --- | --- | --- |
-| Fish | `fish/<species>.svg` | 120 x 52 | Facing right. The fish body spans x = 4 to 116 (the manifest's `len` 0.93). Species ids: perch, sunfish, rockbass, crappie, bullhead, walleye, sauger, pike, catfish, goldeye, carp, drum, sucker, whitefish, tullibee, burbot, smallmouth, laketrout, brook, rainbow, muskie, sturgeon. |
+| Fish | `fish/<species>.svg` | 120 x 52 | Facing right. The fish body spans x = 4 to 116 (the manifest's `len` 0.93). Species ids: perch, sunfish, rockbass, crappie, bullhead, walleye, sauger, pike, catfish, goldeye, carp, drum, sucker, whitefish, tullibee, burbot, smallmouth, laketrout, brook, rainbow, muskie, sturgeon, greenback (Lake Winnipeg's emerald walleye). |
 | Bodie | `bodie/<pose>.svg` | 64 x 72 | Poses: idle, charge (wind-up), cast, wait, bite, fight, cheer. Boots at `feet` [32,70]. `hand` is where the rod handle sits; the game draws the rod and line from there, so leave the rod out. Facing right. |
 | Boats | `boats/canoe.svg`, `boats/tin.svg` | 110 x 32, 120 x 40 | `seat` is where Bodie's boots go, `water` is the waterline y. Bow to the right. |
 | Lake shores | `lakes/<lake>-far.svg` | 960 x 120 | The far shore, bottom edge on the waterline, tiles sideways. Keep landmarks inside x = 0 to 480: narrow phones only see that half. Lakes: dock, red, winnipeg, whiteshell, low. An optional `lakes/<lake>-near.png` slot is reserved for a foreground layer. |
