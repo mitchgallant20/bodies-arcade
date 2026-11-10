@@ -82,6 +82,57 @@ function mustReplace(body, pattern, replacement, what) {
   return next;
 }
 
+// Purple Turtles immersive skin (owner's request, 2026-11-10). The 320x200 pond fills the screen,
+// the cabinet chrome goes, the hop zones are the whole sides of the pond with a glass arrow by the
+// thumb, fireflies drift over the water, and every hop gives the pond a tiny bump. Pure overlay:
+// the legacy file is untouched and the game logic is not changed.
+const turtlesSkinCss = `
+html{padding:0!important;background:#0c0a2a}
+body{padding:0!important;display:block!important;overflow:hidden!important;touch-action:none!important;
+  background:radial-gradient(120% 90% at 50% 112%,#1d4a78 0%,#13234a 45%,#0c0a2a 100%)!important}
+.cab{position:fixed;inset:0;display:block!important;width:auto!important;height:auto!important;max-width:none!important;gap:0!important}
+.cab::before,.cab::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:radial-gradient(2px 2px at 12% 70%,rgba(220,255,140,.9),transparent 60%),radial-gradient(2px 2px at 88% 62%,rgba(220,255,140,.8),transparent 60%),
+    radial-gradient(1.5px 1.5px at 7% 40%,rgba(255,255,255,.7),transparent 60%),radial-gradient(1.5px 1.5px at 93% 35%,rgba(255,255,255,.7),transparent 60%),
+    radial-gradient(2px 2px at 4% 85%,rgba(220,255,140,.8),transparent 60%),radial-gradient(2px 2px at 96% 80%,rgba(220,255,140,.8),transparent 60%),
+    radial-gradient(1.5px 1.5px at 50% 8%,rgba(255,255,255,.6),transparent 60%),radial-gradient(1.5px 1.5px at 30% 4%,rgba(255,255,255,.5),transparent 60%),radial-gradient(1.5px 1.5px at 72% 6%,rgba(255,255,255,.5),transparent 60%);
+  animation:ptFireflies 6s ease-in-out infinite alternate}
+.cab::after{animation-duration:9s;animation-direction:alternate-reverse;opacity:.7}
+@keyframes ptFireflies{from{transform:translateY(0);opacity:.5}to{transform:translateY(-14px);opacity:1}}
+.bezel,html.land .bezel{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:1;width:auto!important;max-width:none!important;
+  background:transparent!important;border:0!important;padding:0!important;box-shadow:none!important;border-radius:0!important}
+.stage{width:min(100vw,calc(100dvh * 1.6))!important;aspect-ratio:320/200;border-radius:0!important;box-shadow:0 0 0 1px rgba(255,255,255,.06),0 30px 80px rgba(0,0,0,.6)}
+.stage.bump{animation:ptBump .18s ease-out}
+@keyframes ptBump{30%{transform:scale(1.012)}}
+.hop,html.land .hop{position:fixed;top:0;bottom:0;z-index:2;width:calc((100vw - min(100vw,100dvh * 1.6)) / 2);min-width:64px;height:auto!important;min-height:0!important;
+  border-radius:0!important;background:transparent!important;box-shadow:none!important;transition:none!important;
+  display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:flex-end!important;padding:0 0 calc(env(safe-area-inset-bottom,0px) + 18vh)!important}
+.hop[data-dir="-1"]{left:0;padding-left:env(safe-area-inset-left,0px)!important}
+.hop[data-dir="1"]{right:0;padding-right:env(safe-area-inset-right,0px)!important}
+.hop .arrow{width:clamp(26px,7vmin,40px)!important;height:clamp(26px,7vmin,40px)!important;filter:drop-shadow(0 2px 0 rgba(0,0,0,.5))!important;
+  box-sizing:content-box;padding:clamp(14px,4vmin,22px);border-radius:50%;background:rgba(10,7,32,.45);border:3px solid rgba(255,255,255,.55);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);transition:background .12s,transform .05s}
+.hop span{display:none}
+.hop:active,.hop.down{transform:none!important}
+.hop:active .arrow,.hop.down .arrow{background:rgba(255,255,255,.35);transform:translateY(3px)}
+/* Portrait, and tablets: the pond sits at the top, the hop pads fill the glow below it */
+html:not(.land) .bezel{top:env(safe-area-inset-top,0px);transform:translate(-50%,0)}
+html:not(.land) .stage{width:100vw!important}
+html:not(.land) .hop{top:auto;bottom:0;width:50vw;height:calc(100dvh - 62.5vw - env(safe-area-inset-top,0px))!important;max-height:50vh;justify-content:center!important;padding:0 0 env(safe-area-inset-bottom,0px)!important}
+html:not(.land) .hop .arrow{width:clamp(36px,10vmin,56px)!important;height:clamp(36px,10vmin,56px)!important}
+.credit{display:none!important}
+@media (prefers-reduced-motion:reduce){.cab::before,.cab::after,.stage.bump{animation:none}}
+`;
+const turtlesSkinScript = `<script>
+(function(){
+  // Every hop bumps the pond. hop() is a top-level function in the legacy script, so wrapping the
+  // global binding reaches the game's own calls too. If anything about that changes, this is a no-op.
+  try{
+    var stage=document.getElementById('stage'); var orig=window.hop;
+    if(typeof orig==='function'&&stage){ window.hop=function(){ var r=orig.apply(this,arguments); stage.classList.remove('bump'); void stage.offsetWidth; stage.classList.add('bump'); return r; }; }
+  }catch(e){}
+})();
+</script>`;
 wrap("purple-turtles.html", "#150f30", (body) => {
   // Title screen and pause sheet get a HOME button; the grown-up notes point at Dad's Corner.
   body = mustReplace(body, /(<span class="best" id="bestTitle"><\/span>)/,
@@ -91,8 +142,8 @@ wrap("purple-turtles.html", "#150f30", (body) => {
   body = mustReplace(body, /<p class="fine">Based on Purple Turtles[\s\S]*?<\/p>/,
     `<p class="fine">Based on Purple Turtles (Quicksilva, 1983, Commodore 64). Grown-ups: scores, settings and the reading guide live in <a href="../dad/" style="color:inherit">Dad's Corner</a>.</p>`,
     "grown-up note");
-  return body;
-});
+  return body + turtlesSkinScript;
+}, turtlesSkinCss);
 
 wrap("bodies-books.html", "#eaf2f8", (body) => {
   body = mustReplace(body, /(<div class="lib-head">)/,
