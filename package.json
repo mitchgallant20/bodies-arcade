@@ -7,11 +7,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "prebuild": "node scripts/adapt-legacy.mjs",
+    "prebuild": "node scripts/adapt-legacy.mjs && node scripts/render-sprites.mjs",
     "icons": "node scripts/make-icons.mjs",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "typecheck": "next typegen && tsc --noEmit"
+    "typecheck": "next typegen && tsc --noEmit",
+    "art": "node scripts/art/bodie-poses.mjs && node scripts/art/fish.mjs && node scripts/art/lakes.mjs && node scripts/render-sprites.mjs"
   },
   "dependencies": {
     "next": "16.4.3",

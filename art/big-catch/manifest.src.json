@@ -1,0 +1,166 @@
+{
+ "version": 1,
+ "bodie": {
+  "idle": {
+   "feet": [
+    32,
+    70
+   ],
+   "hand": [
+    46,
+    44
+   ]
+  },
+  "charge": {
+   "feet": [
+    32,
+    70
+   ],
+   "hand": [
+    27,
+    19
+   ]
+  },
+  "cast": {
+   "feet": [
+    32,
+    70
+   ],
+   "hand": [
+    55,
+    28
+   ]
+  },
+  "wait": {
+   "feet": [
+    32,
+    70
+   ],
+   "hand": [
+    50,
+    38
+   ]
+  },
+  "bite": {
+   "feet": [
+    32,
+    70
+   ],
+   "hand": [
+    51,
+    33
+   ]
+  },
+  "fight": {
+   "feet": [
+    32,
+    70
+   ],
+   "hand": [
+    50,
+    35
+   ]
+  },
+  "cheer": {
+   "feet": [
+    32,
+    70
+   ],
+   "hand": [
+    50,
+    13
+   ]
+  }
+ },
+ "fish": {
+  "perch": {
+   "len": 0.93
+  },
+  "sunfish": {
+   "len": 0.93
+  },
+  "rockbass": {
+   "len": 0.93
+  },
+  "crappie": {
+   "len": 0.93
+  },
+  "bullhead": {
+   "len": 0.93
+  },
+  "walleye": {
+   "len": 0.93
+  },
+  "sauger": {
+   "len": 0.93
+  },
+  "pike": {
+   "len": 0.93
+  },
+  "catfish": {
+   "len": 0.93
+  },
+  "goldeye": {
+   "len": 0.93
+  },
+  "carp": {
+   "len": 0.93
+  },
+  "drum": {
+   "len": 0.93
+  },
+  "sucker": {
+   "len": 0.93
+  },
+  "whitefish": {
+   "len": 0.93
+  },
+  "tullibee": {
+   "len": 0.93
+  },
+  "burbot": {
+   "len": 0.93
+  },
+  "smallmouth": {
+   "len": 0.93
+  },
+  "laketrout": {
+   "len": 0.93
+  },
+  "brook": {
+   "len": 0.93
+  },
+  "rainbow": {
+   "len": 0.93
+  },
+  "muskie": {
+   "len": 0.93
+  },
+  "sturgeon": {
+   "len": 0.93
+  }
+ },
+ "boats": {
+  "canoe": {
+   "seat": [
+    62,
+    18
+   ],
+   "water": 20
+  },
+  "tin": {
+   "seat": [
+    70,
+    22
+   ],
+   "water": 26
+  }
+ },
+ "lakes": {
+  "dock": {},
+  "red": {},
+  "winnipeg": {},
+  "whiteshell": {},
+  "low": {}
+ }
+}

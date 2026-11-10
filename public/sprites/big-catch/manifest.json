@@ -1,0 +1,300 @@
+{
+ "version": 1,
+ "scale": 2,
+ "fish": {
+  "perch": {
+   "src": "fish/perch.png",
+   "w": 240,
+   "h": 104,
+   "len": 0.93
+  },
+  "sunfish": {
+   "src": "fish/sunfish.png",
+   "w": 240,
+   "h": 104,
+   "len": 0.93
+  },
+  "rockbass": {
+   "src": "fish/rockbass.png",
+   "w": 240,
+   "h": 104,
+   "len": 0.93
+  },
+  "crappie": {
+   "src": "fish/crappie.png",
+   "w": 240,
+   "h": 104,
+   "len": 0.93
+  },
+  "bullhead": {
+   "src": "fish/bullhead.png",
+   "w": 240,
+   "h": 104,
+   "len": 0.93
+  },
+  "walleye": {
+   "src": "fish/walleye.png",
+   "w": 240,
+   "h": 104,
+   "len": 0.93
+  },
+  "sauger": {
+   "src": "fish/sauger.png",
+   "w": 240,
+   "h": 104,
+   "len": 0.93
+  },
+  "pike": {
+   "src": "fish/pike.png",
+   "w": 240,
+   "h": 104,
+   "len": 0.93
+  },
+  "catfish": {
+   "src": "fish/catfish.png",
+   "w": 240,
+   "h": 104,
+   "len": 0.93
+  },
+  "goldeye": {
+   "src": "fish/goldeye.png",
+   "w": 240,
+   "h": 104,
+   "len": 0.93
+  },
+  "carp": {
+   "src": "fish/carp.png",
+   "w": 240,
+   "h": 104,
+   "len": 0.93
+  },
+  "drum": {
+   "src": "fish/drum.png",
+   "w": 240,
+   "h": 104,
+   "len": 0.93
+  },
+  "sucker": {
+   "src": "fish/sucker.png",
+   "w": 240,
+   "h": 104,
+   "len": 0.93
+  },
+  "whitefish": {
+   "src": "fish/whitefish.png",
+   "w": 240,
+   "h": 104,
+   "len": 0.93
+  },
+  "tullibee": {
+   "src": "fish/tullibee.png",
+   "w": 240,
+   "h": 104,
+   "len": 0.93
+  },
+  "burbot": {
+   "src": "fish/burbot.png",
+   "w": 240,
+   "h": 104,
+   "len": 0.93
+  },
+  "smallmouth": {
+   "src": "fish/smallmouth.png",
+   "w": 240,
+   "h": 104,
+   "len": 0.93
+  },
+  "laketrout": {
+   "src": "fish/laketrout.png",
+   "w": 240,
+   "h": 104,
+   "len": 0.93
+  },
+  "brook": {
+   "src": "fish/brook.png",
+   "w": 240,
+   "h": 104,
+   "len": 0.93
+  },
+  "rainbow": {
+   "src": "fish/rainbow.png",
+   "w": 240,
+   "h": 104,
+   "len": 0.93
+  },
+  "muskie": {
+   "src": "fish/muskie.png",
+   "w": 240,
+   "h": 104,
+   "len": 0.93
+  },
+  "sturgeon": {
+   "src": "fish/sturgeon.png",
+   "w": 240,
+   "h": 104,
+   "len": 0.93
+  }
+ },
+ "bodie": {
+  "idle": {
+   "src": "bodie/idle.png",
+   "w": 128,
+   "h": 144,
+   "feet": [
+    64,
+    140
+   ],
+   "hand": [
+    92,
+    88
+   ]
+  },
+  "charge": {
+   "src": "bodie/charge.png",
+   "w": 128,
+   "h": 144,
+   "feet": [
+    64,
+    140
+   ],
+   "hand": [
+    54,
+    38
+   ]
+  },
+  "cast": {
+   "src": "bodie/cast.png",
+   "w": 128,
+   "h": 144,
+   "feet": [
+    64,
+    140
+   ],
+   "hand": [
+    110,
+    56
+   ]
+  },
+  "wait": {
+   "src": "bodie/wait.png",
+   "w": 128,
+   "h": 144,
+   "feet": [
+    64,
+    140
+   ],
+   "hand": [
+    100,
+    76
+   ]
+  },
+  "bite": {
+   "src": "bodie/bite.png",
+   "w": 128,
+   "h": 144,
+   "feet": [
+    64,
+    140
+   ],
+   "hand": [
+    102,
+    66
+   ]
+  },
+  "fight": {
+   "src": "bodie/fight.png",
+   "w": 128,
+   "h": 144,
+   "feet": [
+    64,
+    140
+   ],
+   "hand": [
+    100,
+    70
+   ]
+  },
+  "cheer": {
+   "src": "bodie/cheer.png",
+   "w": 128,
+   "h": 144,
+   "feet": [
+    64,
+    140
+   ],
+   "hand": [
+    100,
+    26
+   ]
+  }
+ },
+ "boats": {
+  "canoe": {
+   "src": "boats/canoe.png",
+   "w": 220,
+   "h": 64,
+   "seat": [
+    124,
+    36
+   ],
+   "water": 40
+  },
+  "tin": {
+   "src": "boats/tin.png",
+   "w": 240,
+   "h": 80,
+   "seat": [
+    140,
+    44
+   ],
+   "water": 52
+  }
+ },
+ "lakes": {
+  "dock": {
+   "far": {
+    "src": "lakes/dock-far.png",
+    "w": 1920,
+    "h": 240
+   },
+   "near": null,
+   "waterline": 0
+  },
+  "red": {
+   "far": {
+    "src": "lakes/red-far.png",
+    "w": 1920,
+    "h": 240
+   },
+   "near": null,
+   "waterline": 0
+  },
+  "winnipeg": {
+   "far": {
+    "src": "lakes/winnipeg-far.png",
+    "w": 1920,
+    "h": 240
+   },
+   "near": null,
+   "waterline": 0
+  },
+  "whiteshell": {
+   "far": {
+    "src": "lakes/whiteshell-far.png",
+    "w": 1920,
+    "h": 240
+   },
+   "near": null,
+   "waterline": 0
+  },
+  "low": {
+   "far": {
+    "src": "lakes/low-far.png",
+    "w": 1920,
+    "h": 240
+   },
+   "near": null,
+   "waterline": 0
+  }
+ }
+}

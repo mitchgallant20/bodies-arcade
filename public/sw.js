@@ -1,11 +1,11 @@
 /* Bodie's Arcade service worker. Offline first (HANDOFF Section 2, rule 7).
    Precaches the shell, the play pages, fonts and icons on install, then keeps every
    same-origin file it has served fresh in the background. Nothing from /api/ is cached. */
-const VERSION = "arcade-v2";
+const VERSION = "arcade-v3";
 const SHELL = [
   "./", "./arcade/", "./reading/", "./dad/", "./offline/",
   "./play/purple-turtles.html", "./play/bodies-books.html", "./play/big-catch.html",
-  "./manifest.webmanifest",
+  "./manifest.webmanifest", "./sprites/big-catch/manifest.json",
   "./fonts/fonts.css",
   "./fonts/fredoka-500-latin.woff2", "./fonts/fredoka-600-latin.woff2", "./fonts/fredoka-700-latin.woff2",
   "./fonts/lexend-500-latin.woff2", "./fonts/lexend-700-latin.woff2", "./fonts/press-start-2p-400-latin.woff2",
