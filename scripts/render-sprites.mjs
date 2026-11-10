@@ -50,6 +50,14 @@ for (const [pose, spec] of Object.entries(manifestSrc.bodie || {})) {
   const r = await render(`bodie/${pose}`); if (!r) continue;
   manifest.bodie[pose] = { ...r, feet: scaled(spec.feet), hand: scaled(spec.hand) }; count++;
 }
+manifest.outfits = {};
+for (const outfit of manifestSrc.outfits || []) {
+  manifest.outfits[outfit] = {};
+  for (const [pose, spec] of Object.entries(manifestSrc.bodie || {})) {
+    const r = await render(`bodie/${outfit}/${pose}`); if (!r) continue;
+    manifest.outfits[outfit][pose] = { ...r, feet: scaled(spec.feet), hand: scaled(spec.hand) }; count++;
+  }
+}
 for (const [id, spec] of Object.entries(manifestSrc.boats || {})) {
   const r = await render(`boats/${id}`); if (!r) continue;
   manifest.boats[id] = { ...r, seat: scaled(spec.seat), water: (spec.water || 0) * SCALE }; count++;

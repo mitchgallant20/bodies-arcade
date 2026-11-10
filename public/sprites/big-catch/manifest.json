@@ -329,5 +329,472 @@
    "near": null,
    "waterline": 0
   }
+ },
+ "outfits": {
+  "jets": {
+   "idle": {
+    "src": "bodie/jets/idle.png",
+    "w": 128,
+    "h": 144,
+    "feet": [
+     64,
+     140
+    ],
+    "hand": [
+     92,
+     88
+    ]
+   },
+   "charge": {
+    "src": "bodie/jets/charge.png",
+    "w": 128,
+    "h": 144,
+    "feet": [
+     64,
+     140
+    ],
+    "hand": [
+     54,
+     38
+    ]
+   },
+   "cast": {
+    "src": "bodie/jets/cast.png",
+    "w": 128,
+    "h": 144,
+    "feet": [
+     64,
+     140
+    ],
+    "hand": [
+     110,
+     56
+    ]
+   },
+   "wait": {
+    "src": "bodie/jets/wait.png",
+    "w": 128,
+    "h": 144,
+    "feet": [
+     64,
+     140
+    ],
+    "hand": [
+     100,
+     76
+    ]
+   },
+   "bite": {
+    "src": "bodie/jets/bite.png",
+    "w": 128,
+    "h": 144,
+    "feet": [
+     64,
+     140
+    ],
+    "hand": [
+     102,
+     66
+    ]
+   },
+   "fight": {
+    "src": "bodie/jets/fight.png",
+    "w": 128,
+    "h": 144,
+    "feet": [
+     64,
+     140
+    ],
+    "hand": [
+     100,
+     70
+    ]
+   },
+   "cheer": {
+    "src": "bodie/jets/cheer.png",
+    "w": 128,
+    "h": 144,
+    "feet": [
+     64,
+     140
+    ],
+    "hand": [
+     100,
+     26
+    ]
+   }
+  },
+  "riders": {
+   "idle": {
+    "src": "bodie/riders/idle.png",
+    "w": 128,
+    "h": 144,
+    "feet": [
+     64,
+     140
+    ],
+    "hand": [
+     92,
+     88
+    ]
+   },
+   "charge": {
+    "src": "bodie/riders/charge.png",
+    "w": 128,
+    "h": 144,
+    "feet": [
+     64,
+     140
+    ],
+    "hand": [
+     54,
+     38
+    ]
+   },
+   "cast": {
+    "src": "bodie/riders/cast.png",
+    "w": 128,
+    "h": 144,
+    "feet": [
+     64,
+     140
+    ],
+    "hand": [
+     110,
+     56
+    ]
+   },
+   "wait": {
+    "src": "bodie/riders/wait.png",
+    "w": 128,
+    "h": 144,
+    "feet": [
+     64,
+     140
+    ],
+    "hand": [
+     100,
+     76
+    ]
+   },
+   "bite": {
+    "src": "bodie/riders/bite.png",
+    "w": 128,
+    "h": 144,
+    "feet": [
+     64,
+     140
+    ],
+    "hand": [
+     102,
+     66
+    ]
+   },
+   "fight": {
+    "src": "bodie/riders/fight.png",
+    "w": 128,
+    "h": 144,
+    "feet": [
+     64,
+     140
+    ],
+    "hand": [
+     100,
+     70
+    ]
+   },
+   "cheer": {
+    "src": "bodie/riders/cheer.png",
+    "w": 128,
+    "h": 144,
+    "feet": [
+     64,
+     140
+    ],
+    "hand": [
+     100,
+     26
+    ]
+   }
+  },
+  "bluejays": {
+   "idle": {
+    "src": "bodie/bluejays/idle.png",
+    "w": 128,
+    "h": 144,
+    "feet": [
+     64,
+     140
+    ],
+    "hand": [
+     92,
+     88
+    ]
+   },
+   "charge": {
+    "src": "bodie/bluejays/charge.png",
+    "w": 128,
+    "h": 144,
+    "feet": [
+     64,
+     140
+    ],
+    "hand": [
+     54,
+     38
+    ]
+   },
+   "cast": {
+    "src": "bodie/bluejays/cast.png",
+    "w": 128,
+    "h": 144,
+    "feet": [
+     64,
+     140
+    ],
+    "hand": [
+     110,
+     56
+    ]
+   },
+   "wait": {
+    "src": "bodie/bluejays/wait.png",
+    "w": 128,
+    "h": 144,
+    "feet": [
+     64,
+     140
+    ],
+    "hand": [
+     100,
+     76
+    ]
+   },
+   "bite": {
+    "src": "bodie/bluejays/bite.png",
+    "w": 128,
+    "h": 144,
+    "feet": [
+     64,
+     140
+    ],
+    "hand": [
+     102,
+     66
+    ]
+   },
+   "fight": {
+    "src": "bodie/bluejays/fight.png",
+    "w": 128,
+    "h": 144,
+    "feet": [
+     64,
+     140
+    ],
+    "hand": [
+     100,
+     70
+    ]
+   },
+   "cheer": {
+    "src": "bodie/bluejays/cheer.png",
+    "w": 128,
+    "h": 144,
+    "feet": [
+     64,
+     140
+    ],
+    "hand": [
+     100,
+     26
+    ]
+   }
+  },
+  "sunset": {
+   "idle": {
+    "src": "bodie/sunset/idle.png",
+    "w": 128,
+    "h": 144,
+    "feet": [
+     64,
+     140
+    ],
+    "hand": [
+     92,
+     88
+    ]
+   },
+   "charge": {
+    "src": "bodie/sunset/charge.png",
+    "w": 128,
+    "h": 144,
+    "feet": [
+     64,
+     140
+    ],
+    "hand": [
+     54,
+     38
+    ]
+   },
+   "cast": {
+    "src": "bodie/sunset/cast.png",
+    "w": 128,
+    "h": 144,
+    "feet": [
+     64,
+     140
+    ],
+    "hand": [
+     110,
+     56
+    ]
+   },
+   "wait": {
+    "src": "bodie/sunset/wait.png",
+    "w": 128,
+    "h": 144,
+    "feet": [
+     64,
+     140
+    ],
+    "hand": [
+     100,
+     76
+    ]
+   },
+   "bite": {
+    "src": "bodie/sunset/bite.png",
+    "w": 128,
+    "h": 144,
+    "feet": [
+     64,
+     140
+    ],
+    "hand": [
+     102,
+     66
+    ]
+   },
+   "fight": {
+    "src": "bodie/sunset/fight.png",
+    "w": 128,
+    "h": 144,
+    "feet": [
+     64,
+     140
+    ],
+    "hand": [
+     100,
+     70
+    ]
+   },
+   "cheer": {
+    "src": "bodie/sunset/cheer.png",
+    "w": 128,
+    "h": 144,
+    "feet": [
+     64,
+     140
+    ],
+    "hand": [
+     100,
+     26
+    ]
+   }
+  },
+  "camo": {
+   "idle": {
+    "src": "bodie/camo/idle.png",
+    "w": 128,
+    "h": 144,
+    "feet": [
+     64,
+     140
+    ],
+    "hand": [
+     92,
+     88
+    ]
+   },
+   "charge": {
+    "src": "bodie/camo/charge.png",
+    "w": 128,
+    "h": 144,
+    "feet": [
+     64,
+     140
+    ],
+    "hand": [
+     54,
+     38
+    ]
+   },
+   "cast": {
+    "src": "bodie/camo/cast.png",
+    "w": 128,
+    "h": 144,
+    "feet": [
+     64,
+     140
+    ],
+    "hand": [
+     110,
+     56
+    ]
+   },
+   "wait": {
+    "src": "bodie/camo/wait.png",
+    "w": 128,
+    "h": 144,
+    "feet": [
+     64,
+     140
+    ],
+    "hand": [
+     100,
+     76
+    ]
+   },
+   "bite": {
+    "src": "bodie/camo/bite.png",
+    "w": 128,
+    "h": 144,
+    "feet": [
+     64,
+     140
+    ],
+    "hand": [
+     102,
+     66
+    ]
+   },
+   "fight": {
+    "src": "bodie/camo/fight.png",
+    "w": 128,
+    "h": 144,
+    "feet": [
+     64,
+     140
+    ],
+    "hand": [
+     100,
+     70
+    ]
+   },
+   "cheer": {
+    "src": "bodie/camo/cheer.png",
+    "w": 128,
+    "h": 144,
+    "feet": [
+     64,
+     140
+    ],
+    "hand": [
+     100,
+     26
+    ]
+   }
+  }
  }
 }

@@ -227,6 +227,18 @@ canvas#scene{position:absolute;inset:0;width:100%;height:100%;display:block}
 .speak:active{transform:translateY(3px);box-shadow:0 1px 0 var(--turtle-shadow)}
 .speak:focus-visible{outline:3px solid var(--warn);outline-offset:2px}
 
+/* Derby */
+#derby .box{background:rgba(10,7,32,.92);border:3px solid var(--turtle);border-radius:16px;padding:14px 22px;display:flex;flex-direction:column;align-items:center;gap:8px;max-width:min(94vw,560px)}
+#derby .big{font-family:var(--display);font-size:clamp(13px,3.4vmin,22px);color:var(--turtle)}
+.derbyrows{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.derbyrows:empty{display:none}
+.drow{display:flex;flex-direction:column;align-items:center;gap:4px;background:#1b1444;border:2px solid var(--cab-edge);border-radius:12px;padding:10px 16px;min-width:130px}
+.drow.win{border-color:var(--warn);box-shadow:0 0 0 2px rgba(255,210,63,.35)}
+.drow .who{font-family:var(--display);font-size:clamp(9px,2.2vmin,13px);color:#fff}
+.drow .n{font-size:clamp(14px,3vmin,18px);font-weight:700;color:#fff}
+.drow .l{font-size:clamp(11px,2.4vmin,14px);color:var(--muted)}
+.drow .cup{font-size:clamp(20px,5vmin,30px);line-height:1}
+
 /* Day done */
 #daydone .box{background:rgba(10,7,32,.92);border:3px solid var(--warn);border-radius:16px;padding:14px 22px;display:flex;flex-direction:column;align-items:center;gap:8px;max-width:min(94vw,560px)}
 #daydone .big{font-family:var(--display);font-size:clamp(13px,3.4vmin,22px);color:var(--warn)}
@@ -326,7 +338,11 @@ canvas#scene{position:absolute;inset:0;width:100%;height:100%;display:block}
     <span class="kicker">BODIE'S</span>
     <h1 class="title-big">BIG CATCH</h1>
     <p class="tag">Cast. Wait for the bite. Reel it in!</p>
-    <button class="btn" id="playBtn" type="button">PLAY</button>
+    <div class="row">
+      <button class="btn" id="playBtn" type="button">PLAY</button>
+      <button class="btn ghost" id="derbyBtn" type="button">DERBY</button>
+    </div>
+    <span class="best" id="derbyTitle"></span>
     <p class="hint"><span class="tp">Hold the big button to cast. Tap it when the bobber dips. Hold to reel, let go when the fish runs.</span><span class="kb">Hold SPACE to cast. Tap it when the bobber dips. Hold to reel, let go when the fish runs.</span></p>
     <span class="fotd" id="fotdTitle"></span>
     <span class="best" id="bestTitle"></span>
@@ -360,6 +376,18 @@ canvas#scene{position:absolute;inset:0;width:100%;height:100%;display:block}
     </div>
   </div>
 
+  <div class="layer screen dim" id="derby" hidden>
+    <div class="box">
+      <span class="big" id="derbyHead">DAD vs BODIE</span>
+      <p class="tag" id="derbyLine">Ten casts each. Most fish and biggest fish win.</p>
+      <div class="derbyrows" id="derbyRows"></div>
+      <div class="row">
+        <button class="btn" id="derbyGo" type="button">BODIE, GO!</button>
+        <button class="btn ghost" id="derbyQuit" type="button">NOT NOW</button>
+      </div>
+    </div>
+  </div>
+
   <div class="layer screen dim" id="daydone" hidden>
     <div class="box">
       <span class="big" id="ddTitle">DAY DONE</span>
@@ -385,6 +413,7 @@ canvas#scene{position:absolute;inset:0;width:100%;height:100%;display:block}
       <button class="tab" role="tab" data-tab="rod" aria-selected="false" type="button">Rods</button>
       <button class="tab" role="tab" data-tab="reel" aria-selected="false" type="button">Reels</button>
       <button class="tab" role="tab" data-tab="boat" aria-selected="false" type="button">Boats</button>
+      <button class="tab" role="tab" data-tab="look" aria-selected="false" type="button">Looks</button>
       <button class="tab" role="tab" data-tab="extra" aria-selected="false" type="button">Extras</button>
     </div>
     <div class="panel-body"><div class="grid" id="shopGrid"></div></div>
@@ -409,6 +438,7 @@ canvas#scene{position:absolute;inset:0;width:100%;height:100%;display:block}
     <div class="set-box">
       <span class="kicker" id="pauseLbl">PAUSED</span>
       <label class="opt"><input type="checkbox" id="soundToggle" checked><span>Sound effects</span></label>
+      <label class="opt"><input type="checkbox" id="ambientToggle" checked><span>Lake sounds and music<small>Water, wind, loons, crickets, the line singing on a run, and the title tune.</small></span></label>
       <label class="opt"><input type="checkbox" id="readingToggle"><span>Word mode (sight words)<small>When a fish bites, Bodie hears a word and taps the one that matches to set the hook. After a catch he can spell the fish for a worm in the bait jar. Wrong picks never cost a thing; the fish waits. Words come from the same lists as Bodie's Books.</small></span></label>
       <div class="row">
         <button class="btn" id="resumeBtn" type="button">RESUME</button>
@@ -532,8 +562,62 @@ const Audio=(function(){
       src.connect(lp).connect(g).connect(ac.destination); src.start();
     }catch(e){}
   }
+  // ---- Ambient layer: looping noise shaped into water, wind and rain, plus little calls ----
+  let amb=null, ambOn=true, ambMaster=null, sing=null, themeTimer=null, themeStep=0;
+  function noiseBuffer(){ const n=ac.sampleRate*2, b=ac.createBuffer(1,n,ac.sampleRate), d=b.getChannelData(0); let last=0; for(let i=0;i<n;i++){ const w=Math.random()*2-1; last=(last+0.02*w)/1.02; d[i]=(w*0.4+last*2.5)*0.6; } return b; }
+  function layer(filterType,freq,q,lfoHz,lfoDepth){
+    const src=ac.createBufferSource(); src.buffer=noiseBuffer(); src.loop=true;
+    const f=ac.createBiquadFilter(); f.type=filterType; f.frequency.value=freq; f.Q.value=q||0.7;
+    const g=ac.createGain(); g.gain.value=0;
+    src.connect(f).connect(g).connect(ambMaster); src.start();
+    if(lfoHz){ const lfo=ac.createOscillator(), lg=ac.createGain(); lfo.frequency.value=lfoHz; lg.gain.value=lfoDepth; lfo.connect(lg).connect(g.gain); lfo.start(); }
+    return g;
+  }
+  function ensureAmbient(){
+    if(amb||!ac) return;
+    ambMaster=ac.createGain(); ambMaster.gain.value=ambOn?1:0; ambMaster.connect(ac.destination);
+    amb={ water:layer('bandpass',520,0.6,0.17,0.02), wind:layer('lowpass',220,0.5,0.07,0.03), rain:layer('highpass',2600,0.5,0,0), ice:layer('lowpass',140,0.8,0.05,0.02) };
+    // The line: a thin whine that opens up while a fish runs
+    const o=ac.createOscillator(), bp=ac.createBiquadFilter(), g=ac.createGain(), v=ac.createOscillator(), vg=ac.createGain();
+    o.type='sawtooth'; o.frequency.value=1150; bp.type='bandpass'; bp.frequency.value=1800; bp.Q.value=6; g.gain.value=0;
+    v.frequency.value=6.5; vg.gain.value=18; v.connect(vg).connect(o.frequency); v.start(); o.connect(bp).connect(g).connect(ambMaster); o.start();
+    sing=g;
+  }
+  function setTarget(g,v,t){ try{ g.gain.setTargetAtTime(v,ac.currentTime,t||0.8); }catch(e){} }
+  // Called a few times a second with what the lake is doing
+  function scene(sc){
+    if(!ac||!on) return; ensureAmbient(); if(!amb) return;
+    const q=sc.quiet?0.35:1;
+    setTarget(amb.water,sc.ice?0:(0.035+(sc.big?0.02:0)+(sc.weather==='rain'?0.015:0))*q);
+    setTarget(amb.wind,(sc.ice?0.05:sc.big?0.025:0.012)*q);
+    setTarget(amb.rain,sc.weather==='rain'?0.035*q:sc.weather==='snow'?0.006*q:0);
+    setTarget(amb.ice,sc.ice?0.03*q:0);
+  }
+  function loon(){ if(!on||!ac) return; const t0=ac.currentTime; const o=ac.createOscillator(), g=ac.createGain(), v=ac.createOscillator(), vg=ac.createGain();
+    o.type='sine'; o.frequency.setValueAtTime(560,t0); o.frequency.exponentialRampToValueAtTime(880,t0+0.5); o.frequency.exponentialRampToValueAtTime(820,t0+1.1); o.frequency.exponentialRampToValueAtTime(540,t0+1.7);
+    v.frequency.value=5; vg.gain.value=9; v.connect(vg).connect(o.frequency); v.start(t0); v.stop(t0+1.9);
+    g.gain.setValueAtTime(0.0001,t0); g.gain.exponentialRampToValueAtTime(0.045,t0+0.25); g.gain.setValueAtTime(0.045,t0+1.2); g.gain.exponentialRampToValueAtTime(0.0001,t0+1.8);
+    o.connect(g).connect(ambMaster||ac.destination); o.start(t0); o.stop(t0+1.9); }
+  function crickets(){ if(!on||!ac) return; for(let i=0;i<7;i++){ tone(4300+Math.random()*200,0.02,'square',0.009,i*0.065); } }
+  function frog(){ if(!on||!ac) return; tone(150,0.16,'sawtooth',0.03,0,105); tone(140,0.12,'sawtooth',0.025,0.22,100); }
+  function gull(){ if(!on||!ac) return; tone(1400,0.12,'sawtooth',0.02,0,1900); tone(1300,0.14,'sawtooth',0.018,0.18,1700); }
+  function creakIce(){ if(!on||!ac) return; tone(55,0.5,'sine',0.08,0,42); noise(0.35,0.12,300); }
+  function lineSing(onNow,intensity){ if(!sing) return; setTarget(sing,onNow?0.02+0.03*(intensity||0):0,onNow?0.12:0.25); }
+  // Title theme: a little chip tune that loops while the title screen is up
+  const MEL=[523,659,784,659,880,784,659,523, 587,698,880,698,988,880,698,587, 523,659,784,1047,988,784,659,784, 880,784,659,587,523,0,392,0];
+  const BASS=[262,0,262,0,294,0,294,0,262,0,262,0,196,0,196,0];
+  function theme(onNow){
+    if(!onNow){ if(themeTimer){ clearInterval(themeTimer); themeTimer=null; } return; }
+    if(themeTimer||!ac||!on||!ambOn) return;
+    themeStep=0;
+    themeTimer=setInterval(()=>{ if(!on||!ambOn){ return; } const m=MEL[themeStep%MEL.length], b=BASS[themeStep%BASS.length]; if(m) tone(m,0.14,'square',0.03); if(b) tone(b,0.22,'triangle',0.045); themeStep++; },150);
+  }
+  function legendJingle(){ [523,659,784,1047].forEach((f,i)=>tone(f,0.12,'square',0.07,i*0.09)); [523,659,784].forEach(f=>tone(f,0.6,'triangle',0.05,0.4)); tone(1319,0.5,'square',0.06,0.5); tone(1568,0.7,'square',0.06,0.75); tone(262,0.9,'triangle',0.07,0.4); }
+  function pause(hidden){ if(!ac) return; if(ambMaster) setTarget(ambMaster,hidden?0:(ambOn?1:0),0.2); if(hidden) theme(false); }
   return {
-    ensure, isOn:()=>on, toggle:v=>{on=!!v;},
+    ensure, isOn:()=>on, toggle:v=>{on=!!v; if(!on){ theme(false); if(ambMaster) setTarget(ambMaster,0,0.1); } else if(ambMaster) setTarget(ambMaster,ambOn?1:0,0.3); },
+    ambientOn:()=>ambOn, toggleAmbient:v=>{ ambOn=!!v; if(ambMaster) setTarget(ambMaster,ambOn?1:0,0.3); if(!ambOn) theme(false); },
+    scene, loon, crickets, frog, gull, creakIce, lineSing, theme, legendJingle, pause,
     tick(){ tone(1400,0.03,'square',0.025); },
     charge(p){ tone(200+p*500,0.04,'triangle',0.03); },
     cast(){ noise(0.25,0.12,2500); tone(900,0.3,'sine',0.04,0,300); },
@@ -554,6 +638,7 @@ const Audio=(function(){
     coin(){ tone(1319,0.06,'square',0.05); tone(1760,0.1,'square',0.05,0.05); },
     badge(){ [659,880,1109,1319,1760].forEach((f,i)=>tone(f,0.1,'triangle',0.09,i*0.08)); },
     dayEnd(){ [523,494,440,392,440,523].forEach((f,i)=>tone(f,0.16,'triangle',0.08,i*0.14)); },
+    woof(){ tone(220,0.09,'sawtooth',0.07,0,120); tone(180,0.12,'sawtooth',0.06,0.16,90); },
   };
 })();
 
@@ -592,7 +677,7 @@ const lerp=(a,b,t)=>a+(b-a)*t;
 // Art lives in public/sprites/big-catch (rendered from art/big-catch by scripts/render-sprites.mjs).
 // Anything missing falls back to the drawn version, asset by asset, so the game runs with no art
 // at all, offline, or while the manifest is still loading.
-const SPR={manifest:null,fish:{},bodie:{},boats:{},lakes:{},sil:{}};
+const SPR={manifest:null,fish:{},bodie:{},outfits:{},boats:{},lakes:{},sil:{}};
 function spriteReady(img){ return !!(img&&img.complete&&img.naturalWidth>0); }
 function loadImg(src){ const im=new Image(); im.decoding='async'; im.src='../sprites/big-catch/'+src; return im; }
 (async function loadSprites(){
@@ -601,6 +686,7 @@ function loadImg(src){ const im=new Image(); im.decoding='async'; im.src='../spr
     const m=await r.json(); SPR.manifest=m;
     for(const [k,v] of Object.entries(m.fish||{})) SPR.fish[k]={...v,img:loadImg(v.src)};
     for(const [k,v] of Object.entries(m.bodie||{})) SPR.bodie[k]={...v,img:loadImg(v.src)};
+    for(const [o,set] of Object.entries(m.outfits||{})){ SPR.outfits[o]={}; for(const [k,v] of Object.entries(set)) SPR.outfits[o][k]={...v,img:loadImg(v.src)}; }
     for(const [k,v] of Object.entries(m.boats||{})) SPR.boats[k]={...v,img:loadImg(v.src)};
     for(const [k,v] of Object.entries(m.lakes||{})) SPR.lakes[k]={far:v.far?{...v.far,img:loadImg(v.far.src)}:null,near:v.near?{...v.near,img:loadImg(v.near.src)}:null,waterline:v.waterline||0};
   }catch(e){}
@@ -708,6 +794,22 @@ const EXTRAS=[
 ];
 // Boats open spots. Every lake has three: the Shore (dock), the Weeds (paddle out; shallow fish,
 // bass and pike) and the Drop-off (motor out; deep fish, bigger ones, the rare ones closer).
+// Looks: outfits swap Bodie's toque and jacket (sprite sets under bodie/<outfit>/); the extras add
+// a friend and some charm to the dock. None of it changes the fishing.
+const OUTFITS=[
+  {id:'classic', name:'Classic', sub:'Red toque, blue jacket.', price:0, ico:'🧢', toque:'#c0392b', jacket:'#1b4fa0', stripe:'#fff'},
+  {id:'jets', name:'Jets', sub:'Navy and aviator blue.', price:400, ico:'✈️', toque:'#041e42', jacket:'#041e42', stripe:'#55a7ff'},
+  {id:'riders', name:'Riders', sub:'Rider green.', price:400, ico:'🌾', toque:'#006341', jacket:'#006341', stripe:'#fff'},
+  {id:'bluejays', name:'Blue Jays', sub:'Royal blue and white.', price:400, ico:'⚾', toque:'#134a8e', jacket:'#1d5bb8', stripe:'#fff'},
+  {id:'sunset', name:'Sunset', sub:'Orange and purple.', price:600, ico:'🌅', toque:'#6a2c91', jacket:'#ff7a1f', stripe:'#ffd23f'},
+  {id:'camo', name:'Camo', sub:'Blend in with the reeds.', price:600, ico:'🌿', toque:'#4b5a2a', jacket:'#5f6f3a', stripe:'#8a7a4a'},
+];
+const LOOKS=[
+  {id:'pup', name:'Pup', sub:'A dog comes fishing. He barks at big ones.', price:900, ico:'🐕'},
+  {id:'lights', name:'Dock Lights', sub:'String lights at night.', price:500, ico:'💡'},
+  {id:'flag', name:"Bodie's Flag", sub:'A purple B flag on the dock.', price:350, ico:'🚩'},
+];
+const outfitById=id=>OUTFITS.find(o=>o.id===id)||OUTFITS[0];
 const BOATS=[
   {id:'canoe', name:'Canoe', sub:'Paddle out to the Weeds.', price:2000, ico:'🛶'},
   {id:'tin', name:'Tin Boat', sub:'Motor out to the Drop-off.', price:6000, ico:'🚤'},
@@ -773,6 +875,8 @@ const BADGES=[
   {id:'words10', ico:'🔤', name:'Word Hook', sub:'Get 10 words right.', test:s=>s.words>=10},
   {id:'words50', ico:'🗣️', name:'Word Champ', sub:'Get 50 words right.', test:s=>s.words>=50},
   {id:'jar1', ico:'🪱', name:'Full Jar', sub:'Fill the bait jar.', test:s=>s.jars>=1},
+  {id:'derby1', ico:'🏆', name:'Derby Champ', sub:'Beat Dad in a derby.', test:s=>s.derbyWins>=1},
+  {id:'dressed', ico:'🧥', name:'Dressed Up', sub:'Buy a new outfit.', test:s=>s.outfitCount>=2},
   {id:'jar5', ico:'🫙', name:'Bait Shop', sub:'Fill the bait jar 5 times.', test:s=>s.jars>=5},
 ];
 
@@ -783,11 +887,13 @@ const DEF=()=>({
   lake:'dock', unlocked:['dock'], badges:[], trips:0, bestDay:0, bestStreak:0, words:0,
   flags:{}, seen:{badges:0,journal:0},
   spot:'shore', boats:[], tier:{}, fotd:{date:'',done:false}, fotdCount:0, iceFish:0, bait:0, jars:0,
+  outfit:'classic', outfits:['classic'], looks:[],
+  derby:{bodie:0,dad:0,ties:0,last:''},
 });
 let S=Object.assign(DEF(),load('bbc_save',{}));
 if(!S.flags) S.flags={};
 if(!S.seen) S.seen={badges:0,journal:0};
-if(!S.boats) S.boats=[]; if(!S.spot) S.spot='shore'; if(!S.tier) S.tier={}; if(!S.fotd) S.fotd={date:'',done:false}; if(!S.fotdCount) S.fotdCount=0;
+if(!S.boats) S.boats=[]; if(!S.spot) S.spot='shore'; if(!S.derby) S.derby={bodie:0,dad:0,ties:0,last:''}; if(!S.outfits) S.outfits=['classic']; if(!S.outfit) S.outfit='classic'; if(!S.looks) S.looks=[]; if(!S.tier) S.tier={}; if(!S.fotd) S.fotd={date:'',done:false}; if(!S.fotdCount) S.fotdCount=0;
 // Older saves: give medals for the best fish already in the book
 for(const sp of Object.keys(S.best)) if(S.tier[sp]===undefined) S.tier[sp]=tierOf(sp,S.best[sp]);
 function persist(){
@@ -798,7 +904,7 @@ function persist(){
 const statsForBadges=()=>({
   total:S.total, bigcm:S.bigcm, maCount:Object.keys(S.ma).length, species:Object.keys(S.best).length,
   unlocked:S.unlocked, flags:S.flags, bestStreak:S.bestStreak, bestDay:S.bestDay, best:S.best,
-  rod:S.rod, lures:S.lures, words:S.words, tier:S.tier, boats:S.boats, fotdCount:S.fotdCount, ma:S.ma, iceFish:S.iceFish||0, jars:S.jars||0,
+  rod:S.rod, lures:S.lures, words:S.words, tier:S.tier, boats:S.boats, fotdCount:S.fotdCount, ma:S.ma, iceFish:S.iceFish||0, jars:S.jars||0, derbyWins:(S.derby&&S.derby.bodie)||0, outfitCount:(S.outfits||[]).length,
 });
 
 // ---------- Reading mode (sight words) ----------
@@ -898,16 +1004,18 @@ const CASTS_PER_DAY=15, NIGHT_CASTS=5;
 let day=null;
 function newDay(){
   const w=isIce()?pick(['sun','sun','cloud','cloud','snow','snow']):pick(['sun','sun','sun','cloud','cloud','rain']);
-  day={cast:0, fish:0, coins:0, bigcm:0, bigsp:'', weather:w, streak:0, badges:[], started:Date.now()};
-  S.trips++;
+  day={cast:0, fish:0, coins:0, bigcm:0, bigsp:'', weather:w, streak:0, badges:[], started:Date.now(), derby:derbyTurn};
+  if(!derbyTurn) S.trips++;
   persist();
   updateHud();
   const tip={sun:isIce()?'Bright and cold. Perch like the sun.':'Sunny day. Bass and perch like the sun.',cloud:isIce()?'Grey sky. Greenbacks bite under the ice.':'Cloudy day. Walleye and pike are out.',rain:'Rainy day. Walleye bite in the rain!',snow:'Snowing! Greenbacks love a snow day.'}[w];
   setStatus(tip);
   if(fotdFresh()){ const fd=FISH[fishOfDay()].name; setTimeout(()=>{ if(state==='idle') setStatus('Fish of the day: '+fd+'! Triple coins!'); },3200); }
 }
-function dayLen(){ return CASTS_PER_DAY+(S.extras.includes('lamp')?NIGHT_CASTS:0); }
-function dayT(){ return day?day.cast/CASTS_PER_DAY:0; }           // 0 = 6 AM, 1 = 9 PM, >1 night
+const DERBY_CASTS=10;
+function dayLen(){ if(day&&day.derby) return DERBY_CASTS; return CASTS_PER_DAY+(S.extras.includes('lamp')?NIGHT_CASTS:0); }
+function dayT(){ return day?day.cast/(day.derby?DERBY_CASTS:CASTS_PER_DAY):0; }           // 0 = 6 AM, 1 = 9 PM, >1 night
+const isGuest=()=>!!(day&&day.derby==='dad');
 function hourNow(){ return 6+dayT()*15; }
 function timeSlot(){
   const h=hourNow();
@@ -1127,6 +1235,7 @@ function drawScene(){
   // Dock / boat and Bodie
   drawPlatform(lake);
   drawBodie();
+  drawLooks(t);
   // Line, lure, bobber
   drawLine();
   // Particles
@@ -1261,6 +1370,47 @@ function drawPlatform(lake){
   ctx.strokeStyle='rgba(255,255,255,.45)'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(bx-74,y+4+bob*0.3); ctx.lineTo(bx+30,y+4+bob*0.3); ctx.stroke();
   rodTip={x:bx+10,y:y-50+bob};
 }
+// The Looks he has bought: a pup on the dock (or in the boat, or on the ice), string lights after
+// dark, and a purple B pennant on the dock post.
+let pupBark=0;
+function drawLooks(t){
+  const y=water.y, lake=lakeById(S.lake), spot=spotById(S.spot);
+  const inBoat=!isIce()&&(spot.id!=='shore'||lake.shore==='islands');
+  const bob=inBoat?Math.sin(time*1.5)*2:0;
+  if(S.looks.includes('flag')&&lake.shore!=='islands'){
+    const fx=dockX-2, wave=Math.sin(time*3)*2;
+    ctx.fillStyle='#5a3a22'; ctx.fillRect(fx,y-44,2,36);
+    ctx.fillStyle='#8a4fe0'; ctx.beginPath(); ctx.moveTo(fx+2,y-44); ctx.lineTo(fx+22+wave,y-38); ctx.lineTo(fx+2,y-32); ctx.fill();
+    ctx.fillStyle='#fff'; ctx.font='bold 7px Fredoka, sans-serif'; ctx.textAlign='left'; ctx.fillText('B',fx+5,y-35);
+  }
+  if(S.looks.includes('lights')&&(t>0.85||isIce())){
+    const on=t>0.85||isIce();
+    const glow=clamp((t-0.85)*4,isIce()?0.5:0,1);
+    ctx.strokeStyle='rgba(60,40,20,.8)'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(-60,y-30); ctx.quadraticCurveTo(dockX/2-30,y-22,dockX+4,y-30); ctx.stroke();
+    const cols=['#ffd23f','#ff6b6b','#58e070','#7fd3ff','#ffb3f0'];
+    for(let i=0;i<9;i++){ const lx=-56+i*(dockX+56)/8, ly=y-30+Math.sin((i/8)*Math.PI)*8+2, c=cols[i%cols.length];
+      const flick=0.8+0.2*Math.sin(time*6+i*1.7);
+      ctx.fillStyle=c; ctx.globalAlpha=glow*flick; ctx.beginPath(); ctx.arc(lx,ly,1.8,0,Math.PI*2); ctx.fill();
+      const g=ctx.createRadialGradient(lx,ly,0,lx,ly,8); g.addColorStop(0,c); g.addColorStop(1,'rgba(0,0,0,0)'); ctx.globalAlpha=glow*0.35*flick; ctx.fillStyle=g; ctx.fillRect(lx-8,ly-8,16,16); }
+    ctx.globalAlpha=1;
+  }
+  if(S.looks.includes('pup')){
+    // Sits a step behind Bodie, tail going. Perks up on a bite, barks at a landing.
+    const bx=baseX()-52, gy=(inBoat?y-4+bob:isIce()?y-4:y-10);
+    const alert=state==='bite'||state==='fight'||state==='choose'||pupBark>0;
+    const wag=Math.sin(time*(alert?22:9))*(alert?5:3);
+    const hop2=pupBark>0?-Math.abs(Math.sin(time*16))*4:0;
+    const P=(px,py,w,h,col)=>{ ctx.fillStyle=col; ctx.fillRect(bx+px,gy+py+hop2,w,h); };
+    const fur='#a9733d', dark='#6e4722';
+    P(-8,-10,16,8,fur); P(-10,-4,4,4,dark); P(6,-4,4,4,dark);           // body, back legs
+    P(4,-18,10,9,fur); P(12,-15,4,4,fur);                               // head, snout
+    P(3,-20,3,4,dark); P(11,-20,3,4,dark);                              // ears
+    ctx.fillStyle='#222'; ctx.fillRect(bx+10+(alert?1:0),gy-15+hop2,2,2); ctx.fillRect(bx+15,gy-13+hop2,2,2);   // eye, nose
+    ctx.fillStyle='#c0392b'; ctx.fillRect(bx+4,gy-10+hop2,10,2);                                              // collar
+    ctx.strokeStyle=fur; ctx.lineWidth=2.5; ctx.beginPath(); ctx.moveTo(bx-8,gy-9+hop2); ctx.lineTo(bx-13,gy-15+wag+hop2); ctx.stroke(); // tail
+    if(pupBark>0){ pupBark-=dt; if(Math.random()<dt*2) pop(bx+8,gy-24,'WOOF!','good'); }
+  }
+}
 // Bodie, with a pose for every moment: resting, winding up, casting, waiting, hooking, fighting,
 // cheering. Drawn in 2 px pixels so he reads as a sprite.
 function drawBodie(){
@@ -1276,7 +1426,8 @@ function drawBodie(){
   const hop=pose==='bite'?-Math.abs(Math.sin(time*14))*4:pose==='cheer'?-Math.abs(Math.sin(time*9))*5:0;
   const lean=pose==='fight'?-4+Math.sin(time*18)*1.2:pose==='charge'?-3:pose==='cast'?3:0;
   const crouch=pose==='fight'?3:0;
-  const sprite=SPR.bodie[pose]||SPR.bodie.idle;
+  const set=(S.outfit!=='classic'&&SPR.outfits[S.outfit])||SPR.bodie;
+  const sprite=set[pose]||set.idle||SPR.bodie[pose]||SPR.bodie.idle;
   if(sprite&&spriteReady(sprite.img)){
     // 1 sprite unit = 1 world px at the manifest's scale. Feet on the ground, lean and hop applied.
     const sc=1/(SPR.manifest.scale||2);
@@ -1290,12 +1441,13 @@ function drawBodie(){
     return;
   }
   const P=(px,py,w,h,col)=>{ ctx.fillStyle=col; ctx.fillRect(x+px,gy+py+hop,w,h); };
-  const skin='#f1c7a0', jacket='#1b4fa0', pants='#2e3a66', toque='#c0392b', hair='#2b1a0e';
+  const O=outfitById(S.outfit);
+  const skin='#f1c7a0', jacket=O.jacket, pants='#2e3a66', toque=O.toque, hair='#2b1a0e';
   // Legs and boots
   if(pose==='fight'){ P(-10,-16,6,16,pants); P(4,-16,6,16,pants); P(-12,-3,9,3,'#222'); P(3,-3,9,3,'#222'); }
   else { P(-7,-18,6,18,pants); P(1,-18,6,18,pants); P(-8,-3,8,3,'#222'); P(1,-3,8,3,'#222'); }
   // Jacket with a white stripe, leaning
-  P(-9+lean,-38+crouch,18,20-crouch,jacket); P(-9+lean,-30+crouch,18,3,'#fff');
+  P(-9+lean,-38+crouch,18,20-crouch,jacket); P(-9+lean,-30+crouch,18,3,O.stripe);
   // Head, hair, toque with pom
   P(-6+lean,-50+crouch,12,12,skin); P(-7+lean,-52+crouch,14,5,hair); P(-7+lean,-56+crouch,14,6,toque); P(-2+lean,-59+crouch,4,4,'#fff');
   // Face: eye, and a mouth that changes
@@ -1532,14 +1684,14 @@ function updateHud(){
   coinsEl.textContent=S.coins;
   lakeLbl.textContent=lakeById(S.lake).lbl;
   const spot=spotById(S.spot);
-  timeLbl.textContent=(day?timeText():'')+(spot.lbl?(day?' · ':'')+spot.lbl:'');
+  timeLbl.textContent=(day?timeText():'')+(spot.lbl?(day?' · ':'')+spot.lbl:'')+(day&&day.derby?' · DERBY: '+day.derby.toUpperCase():'');
   dayFishEl.textContent=(day?day.fish:0)+' FISH';
   const newBadges=S.badges.length-(S.seen.badges||0);
   $('badgesBtn').classList.toggle('alert',newBadges>0);
   const canUnlock=LAKES.some(l=>!S.unlocked.includes(l.id)&&unlockOk(l).ok);
   const newSpot=SPOTS.some(sp=>sp.needs&&S.boats.includes(sp.needs)&&!(S.flags['spot_'+sp.id]));
   $('lakesBtn').classList.toggle('alert',canUnlock||newSpot);
-  const canBuy=[...RODS,...REELS,...LURES,...BOATS,...EXTRAS].some(g=>!owns(g)&&g.price>0&&g.price<=S.coins);
+  const canBuy=[...RODS,...REELS,...LURES,...BOATS,...OUTFITS,...LOOKS,...EXTRAS].some(g=>!owns(g)&&g.price>0&&g.price<=S.coins);
   $('shopBtn').classList.toggle('alert',canBuy&&S.coins>=40);
   $('journalBtn').classList.toggle('alert',Object.keys(S.best).length>(S.seen.journal||0));
 }
@@ -1548,6 +1700,8 @@ function owns(g){
   if(REELS.includes(g)) return REELS.indexOf(g)<=REELS.indexOf(reelById(S.reel));
   if(LURES.includes(g)) return S.lures.includes(g.id);
   if(BOATS.includes(g)) return S.boats.includes(g.id);
+  if(OUTFITS.includes(g)) return S.outfits.includes(g.id);
+  if(LOOKS.includes(g)) return S.looks.includes(g.id);
   return S.extras.includes(g.id);
 }
 
@@ -1674,7 +1828,7 @@ function setHook(){
 function updateFight(){
   const F=fight; F.t+=dt;
   const running=F.run>0;
-  if(running){ F.run-=dt; if(F.run<=0){ F.runIn=rnd(1.4,3.2)*(1+F.runs*0.3); $('runTag').classList.remove('on'); } }
+  if(running){ F.run-=dt; Audio.lineSing(true,F.tension); if(F.run<=0){ F.runIn=rnd(1.4,3.2)*(1+F.runs*0.3); $('runTag').classList.remove('on'); Audio.lineSing(false); } }
   else { F.runIn-=dt; if(F.runIn<=0&&F.runs<F.runMax&&F.prog<0.93){ F.runs++; F.run=rnd(0.8,1.5)*F.runPower; F.runPower*=0.85; Audio.run(); $('runTag').classList.add('on'); pop(bobber.x,water.y-22,'RUN!','bad'); try{ if(navigator.vibrate) navigator.vibrate(60); }catch(e){} } }
   if(pressed){
     F.tension+=F.pull*(running?2.6:1)*dt;
@@ -1706,7 +1860,7 @@ function updateFight(){
   if(F.prog<=0){ fishOff(); return; }
   if(F.prog>=1){ landFish(); }
 }
-function endFight(){ $('meter').hidden=true; $('runTag').classList.remove('on'); }
+function endFight(){ $('meter').hidden=true; $('runTag').classList.remove('on'); Audio.lineSing(false); }
 function lineSnap(){
   endFight(); Audio.snap(); day.streak=0; cam.shake=8;
   const sh=fight.shadow; sh.hooked=false; sh.chasing=false; sh.dir=-sh.dir; sh.speed=45; sh.life=4;
@@ -1748,7 +1902,22 @@ function landFish(){
   state='land';
   Audio.splash(); splashAt(bobber.x,18,true); cam.shake=6;
   shadows=shadows.filter(s=>s!==shadow);
-  // Records
+  // Records (a derby guest's fish count for the derby and nothing else)
+  if(isGuest()){
+    const isMaG=f.ma>0&&len>=f.ma;
+    day.fish++; day.streak++; if(len>day.bigcm){ day.bigcm=len; day.bigsp=sp; }
+    (isMaG?Audio.bigJingle:Audio.catchJingle)();
+    $('catchTags').innerHTML=(isMaG?'<span class="ma">MASTER ANGLER!</span>':'')+'<span>DERBY FISH</span>';
+    paintFishOn($('catchArt'),sp,len);
+    $('catchName').textContent=f.name; sayText=f.name; spellFish=sp; $('spellBtn').hidden=true;
+    $('catchSize').textContent=Math.round(len)+' cm ('+Math.round(len/2.54)+' in), '+fmtW(weightLb(sp,len));
+    $('catchCoins').textContent="DAD'S TURN";
+    setStatus(''); setAct('NICE!',''); fight=null; bitePending=null;
+    cardLockMs=200;
+    setTimeout(()=>{ state='card'; cardOpenedAt=performance.now(); const box=$('catch').querySelector('.catch-box'); box.classList.add('lock'); $('keepBtn').disabled=true;
+      setTimeout(()=>{ if(state!=='card') return; box.classList.remove('lock'); $('keepBtn').disabled=false; },cardLockMs); $('catch').hidden=false; updateHud(); },reduced?100:500);
+    return;
+  }
   const tags=[];
   const first=!S.best[sp];
   const pb=!first&&len>S.best[sp];
@@ -1780,7 +1949,8 @@ function landFish(){
   emit('catch',{fish:sp,len,coins,first,pb,isMa});
   // Card
   const big=first||pb||isMa||f.rarity>=4||tier>=2&&tier>hadTier||tags.some(t=>t[1]==='fotd');
-  (big?Audio.bigJingle:Audio.catchJingle)();
+  if(S.looks.includes('pup')){ pupBark=big?2.2:1.1; Audio.woof(); }
+  (isMa||f.rarity>=5?Audio.legendJingle:big?Audio.bigJingle:Audio.catchJingle)();
   if(big) confetti(isMa||f.rarity>=4?40:22);
   $('catchTags').innerHTML=tags.map(([t,c])=>'<span class="'+c+'">'+t+'</span>').join('');
   paintFishOn($('catchArt'),sp,len);
@@ -1824,6 +1994,7 @@ function checkBadges(){
 
 // ---------- Day end ----------
 function endDay(){
+  if(day&&day.derby){ Audio.dayEnd(); setStatus(''); setAct('DAY DONE',''); $('meter').hidden=true; derbyAfterDay(); return; }
   state='daydone'; Audio.dayEnd();
   $('ddTitle').textContent=day.fish>0?'DAY DONE':'SLEEPY FISH';
   const lines=day.fish===0?['The fish were sleepy. Try a new lure tomorrow!']:
@@ -1843,6 +2014,52 @@ function startNewDay(){
   newDay(); spawnShadows();
   state='idle'; castLabel();
 }
+
+// ---------- Derby: Dad vs Bodie ----------
+// Pass and play. Bodie fishes ten casts, then Dad fishes ten on the same lake with the same gear.
+// Two events: most fish and biggest fish. Dad fishes as a guest: his catches count for the derby
+// and nothing else, so Bodie's book, coins and badges stay his.
+let derbyTurn=null, derby=null;
+function derbyRecordText(){ const d=S.derby; if(!d||(d.bodie+d.dad+d.ties)===0) return ''; return 'DERBY · BODIE '+d.bodie+' · DAD '+d.dad+(d.ties?' · TIES '+d.ties:''); }
+function openDerby(){
+  if(state!=='title') return;
+  derby={bodie:null,dad:null};
+  $('derbyHead').textContent='DAD vs BODIE'; $('derbyLine').textContent='Ten casts each, same lake, same gear. Most fish and biggest fish win. Bodie goes first!';
+  $('derbyRows').innerHTML=''; $('derbyGo').textContent='BODIE, GO!'; $('derbyQuit').hidden=false;
+  $('title').hidden=true; $('derby').hidden=false; state='derbyCard';
+}
+function derbyRow(who,r,win){ return '<div class="drow'+(win?' win':'')+'"><span class="cup">'+(win?'🏆':who==='bodie'?'🧢':'🎣')+'</span><span class="who">'+who.toUpperCase()+'</span><span class="n">'+r.fish+' fish</span><span class="l">biggest '+(r.fish?Math.round(r.bigcm)+' cm '+FISH[r.bigsp].name:'none')+'</span></div>'; }
+function derbyGo(){
+  if(state!=='derbyCard') return;
+  $('derby').hidden=true;
+  if(!derby.bodie){ derbyTurn='bodie'; }
+  else if(!derby.dad){ derbyTurn='dad'; }
+  else { derbyTurn=null; derby=null; state='title'; $('title').hidden=false; updateHud(); Audio.theme(true); return; }
+  newDay(); spawnShadows(); derbyTurn=null;
+  state='idle'; castLabel(); updateHud();
+  pop(W/2,H*0.4,(day.derby.toUpperCase())+"'S TURN",'good');
+}
+function derbyAfterDay(){
+  const who=day.derby; derby[who]={fish:day.fish,bigcm:day.bigcm,bigsp:day.bigsp};
+  state='derbyCard'; $('derby').hidden=false; $('derbyQuit').hidden=true;
+  if(who==='bodie'){
+    $('derbyHead').textContent="DAD'S TURN"; $('derbyLine').textContent='Bodie is done. Hand the phone to Dad!';
+    $('derbyRows').innerHTML=derbyRow('bodie',derby.bodie,false); $('derbyGo').textContent='DAD, GO!';
+  } else {
+    const b=derby.bodie, d=derby.dad;
+    let bp=0, dp=0; if(b.fish>d.fish) bp++; else if(d.fish>b.fish) dp++; if(b.bigcm>d.bigcm) bp++; else if(d.bigcm>b.bigcm) dp++;
+    const winner=bp>dp?'bodie':dp>bp?'dad':'tie';
+    if(winner==='tie') S.derby.ties++; else S.derby[winner]++; S.derby.last=winner; persist(); checkBadges();
+    $('derbyHead').textContent=winner==='tie'?'A TIE!':winner.toUpperCase()+' WINS!';
+    $('derbyLine').textContent=winner==='tie'?'Both champs today. Rematch tomorrow?':winner==='bodie'?'Bodie takes the derby! Dad buys the slushies.':'Dad takes it this time. Bodie wants a rematch!';
+    $('derbyRows').innerHTML=derbyRow('bodie',b,winner==='bodie')+derbyRow('dad',d,winner==='dad'); $('derbyGo').textContent='DONE';
+    (winner==='bodie'?Audio.bigJingle:Audio.catchJingle)(); if(winner==='bodie') confetti(40);
+    $('derbyTitle').textContent=derbyRecordText();
+  }
+}
+$('derbyBtn').addEventListener('click',()=>{ Audio.ensure(); Audio.theme(false); openDerby(); });
+$('derbyGo').addEventListener('click',()=>{ Audio.ensure(); derbyGo(); });
+$('derbyQuit').addEventListener('click',()=>{ $('derby').hidden=true; derby=null; state='title'; $('title').hidden=false; Audio.theme(true); });
 
 // ---------- Word mode: pick the word to set the hook ----------
 let chooseTarget='', chooseMissed=false;
@@ -1931,7 +2148,7 @@ function press(){
   Audio.ensure();
   if(state==='title'){ startGame(); return; }
   if(state==='card'){ keepFishing(); return; }
-  if(state==='spell') return;
+  if(state==='spell'||state==='derbyCard') return;
   if(state==='daydone'){ startNewDay(); return; }
   if(state==='idle'){ if(day&&day.cast>=dayLen()){ maybeEndDay(); return; } startCharge(); return; }
   if(state==='bite'){ setHook(); return; }
@@ -2001,16 +2218,16 @@ $('shopTabs').addEventListener('click',e=>{ const t=e.target.closest('.tab'); if
 function renderShop(){
   $('shopCoins').textContent=S.coins+' COINS';
   document.querySelectorAll('#shopTabs .tab').forEach(t=>t.setAttribute('aria-selected',String(t.dataset.tab===shopTab)));
-  const list={lure:LURES,rod:RODS,reel:REELS,boat:BOATS,extra:EXTRAS}[shopTab];
+  const list={lure:LURES,rod:RODS,reel:REELS,boat:BOATS,look:[...OUTFITS,...LOOKS],extra:EXTRAS}[shopTab];
   const g=$('shopGrid'); g.innerHTML='';
   list.forEach((it,idx)=>{
     const have=owns(it);
-    const inUse=(shopTab==='lure'&&S.lure===it.id)||(shopTab==='rod'&&S.rod===it.id)||(shopTab==='reel'&&S.reel===it.id)||((shopTab==='extra'||shopTab==='boat')&&have);
+    const inUse=(shopTab==='lure'&&S.lure===it.id)||(shopTab==='rod'&&S.rod===it.id)||(shopTab==='reel'&&S.reel===it.id)||((shopTab==='extra'||shopTab==='boat')&&have)||(shopTab==='look'&&(OUTFITS.includes(it)?S.outfit===it.id:have));
     const prev=(shopTab==='rod'||shopTab==='reel')?idx>0&&!owns(list[idx-1]):false;
     const el=document.createElement('div'); el.className='item'+(inUse?' on':'')+(prev?' locked':'');
     let action='';
-    if(shopTab==='extra'||shopTab==='boat') action=have?'<span class="pr have">OWNED</span>':'<button class="mini" type="button" data-buy '+(S.coins<it.price?'disabled':'')+'>BUY</button>';
-    else if(have) action=inUse?'<span class="pr have">USING</span>':(shopTab==='lure'?'<button class="mini use" type="button" data-use>USE</button>':'<span class="pr have">OWNED</span>');
+    if(shopTab==='extra'||shopTab==='boat'||(shopTab==='look'&&LOOKS.includes(it))) action=have?'<span class="pr have">OWNED</span>':'<button class="mini" type="button" data-buy '+(S.coins<it.price?'disabled':'')+'>BUY</button>';
+    else if(have) action=inUse?'<span class="pr have">USING</span>':(shopTab==='lure'||shopTab==='look'?'<button class="mini use" type="button" data-use>USE</button>':'<span class="pr have">OWNED</span>');
     else action='<button class="mini" type="button" data-buy '+(S.coins<it.price||prev?'disabled':'')+'>BUY</button>';
     el.innerHTML='<span class="ico" aria-hidden="true">'+it.ico+'</span><span class="nm">'+it.name+'</span><span class="sub">'+it.sub+'</span>'+
       (have?'':'<span class="pr">'+it.price+' COINS</span>')+action;
@@ -2026,12 +2243,15 @@ function buy(it){
   else if(REELS.includes(it)) S.reel=it.id;
   else if(LURES.includes(it)){ if(!S.lures.includes(it.id)) S.lures.push(it.id); S.lure=it.id; }
   else if(BOATS.includes(it)){ if(!S.boats.includes(it.id)) S.boats.push(it.id); }
+  else if(OUTFITS.includes(it)){ if(!S.outfits.includes(it.id)) S.outfits.push(it.id); S.outfit=it.id; }
+  else if(LOOKS.includes(it)){ if(!S.looks.includes(it.id)) S.looks.push(it.id); if(it.id==='pup') Audio.woof(); }
   else if(!S.extras.includes(it.id)) S.extras.push(it.id);
   persist(); checkBadges(); renderShop(); updateHud();
   pop(W/2,H*0.5,'GOT IT!','good');
 }
 function use(it){
   if(LURES.includes(it)) S.lure=it.id;
+  if(OUTFITS.includes(it)) S.outfit=it.id;
   Audio.tick(); persist(); renderShop();
 }
 
@@ -2169,11 +2389,13 @@ $('gearBtn').addEventListener('click',()=>{ Audio.ensure(); if(state==='title'){
 $('resumeBtn').addEventListener('click',closePanel);
 $('endDayBtn').addEventListener('click',()=>{ closePanels(); if(day){ endDay(); } });
 $('soundToggle').addEventListener('change',e=>{ Audio.toggle(e.target.checked); save('bbc_sound',e.target.checked); });
+$('ambientToggle').addEventListener('change',e=>{ Audio.toggleAmbient(e.target.checked); save('bbc_ambient',e.target.checked); });
+document.addEventListener('visibilitychange',()=>{ Audio.pause(document.hidden); if(!document.hidden&&state==='title') Audio.theme(true); });
 $('readingToggle').addEventListener('change',e=>setReading(e.target.checked));
 let resetArmed=false;
 $('resetBtn').addEventListener('click',()=>{
   if(!resetArmed){ resetArmed=true; $('resetBtn').textContent='REALLY?'; $('resetNote').textContent='Tap again to erase all fish, coins and badges.'; return; }
-  S=DEF(); persist(); day=null; $('settings').hidden=true; state='title'; $('title').hidden=false; updateHud(); $('bestTitle').textContent=''; showFotdTitle();
+  S=DEF(); persist(); day=null; $('settings').hidden=true; state='title'; $('title').hidden=false; updateHud(); $('bestTitle').textContent=''; showFotdTitle(); Audio.theme(true);
   resetArmed=false; $('resetBtn').textContent='START OVER'; $('resetNote').textContent='';
 });
 $('keepBtn').addEventListener('click',()=>{ Audio.ensure(); keepFishing(); });
@@ -2188,18 +2410,33 @@ function showFotdTitle(){
   const sp=fishOfDay(); const fresh=fotdFresh(); persist();
   const cv=document.createElement('canvas'); cv.width=72; cv.height=36; paintFishOn(cv,sp,FISH[sp].max*0.7,{silhouette:false});
   el.appendChild(cv); const t=document.createElement('span'); t.textContent='FISH OF THE DAY: '+FISH[sp].name.toUpperCase()+(fresh?' · x3 COINS':' · DONE!'); el.appendChild(t);
+  $('derbyTitle').textContent=derbyRecordText();
 }
 function startGame(){
   if(state!=='title') return;
+  Audio.theme(false);
   $('title').hidden=true;
   newDay(); spawnShadows();
   state='idle'; castLabel();
 }
 
 // ---------- Main update ----------
+const ambNext={scene:0,loon:20,cricket:3,frog:6,gull:12,creak:15};
+function updateAmbientSound(){
+  if(time<ambNext.scene) return; ambNext.scene=time+0.3;
+  const lake=lakeById(S.lake), t=dayT(), slot=timeSlot();
+  Audio.scene({ice:isIce(),big:lake.shore==='bigwater'||lake.shore==='islands',weather:day?day.weather:'sun',quiet:state==='title'||state==='menu'||state==='card'||state==='daydone'||state==='derbyCard'});
+  if(state==='title'||state==='menu') return;
+  const wild=lake.shore==='bigwater'||lake.shore==='islands'||lake.shore==='rocks';
+  if(!isIce()&&wild&&time>ambNext.loon){ Audio.loon(); ambNext.loon=time+rnd(25,60); }
+  if(!isIce()&&(slot==='dusk'||slot==='night')&&time>ambNext.cricket){ Audio.crickets(); ambNext.cricket=time+rnd(2.5,4.5); }
+  if(!isIce()&&(slot==='dusk'||slot==='night')&&(S.lake==='dock'||S.spot==='weeds')&&time>ambNext.frog){ Audio.frog(); ambNext.frog=time+rnd(4,9); }
+  if(!isIce()&&lake.shore==='bigwater'&&slot==='day'&&time>ambNext.gull){ Audio.gull(); ambNext.gull=time+rnd(10,25); }
+  if(isIce()&&time>ambNext.creak){ Audio.creakIce(); ambNext.creak=time+rnd(15,35); }
+}
 function update(){
   time+=dt;
-  updateShadows(); updateParticles();
+  updateShadows(); updateParticles(); updateAmbientSound();
   if(state==='charge'){
     chargeT+=dt*chargeDir*(reduced?0.9:1.25);
     if(chargeT>=1){ chargeT=1; chargeDir=-1; } if(chargeT<=0){ chargeT=0; chargeDir=1; }
@@ -2242,6 +2479,7 @@ function frame(ts){
 (function boot(){
   layout();
   const sound=load('bbc_sound',true); Audio.toggle(sound); $('soundToggle').checked=sound;
+  const ambientPref=load('bbc_ambient',true); Audio.toggleAmbient(ambientPref); $('ambientToggle').checked=ambientPref;
   let reading=load('bbc_reading',false); if(location.hash==='#reading') reading=true;
   READING.enabled=!!reading; $('readingToggle').checked=READING.enabled;
   if(canSpeak()){ try{ speechSynthesis.getVoices(); speechSynthesis.addEventListener('voiceschanged',()=>speechSynthesis.getVoices()); }catch(e){} }

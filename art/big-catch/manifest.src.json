@@ -168,5 +168,12 @@
   "wabigoon": {},
   "clearwater": {},
   "ice": {}
- }
+ },
+ "outfits": [
+  "jets",
+  "riders",
+  "bluejays",
+  "sunset",
+  "camo"
+ ]
 }
