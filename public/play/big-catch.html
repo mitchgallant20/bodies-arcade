@@ -131,6 +131,17 @@ canvas#scene{position:absolute;inset:0;width:100%;height:100%;display:block}
 .mbtn .dot{position:absolute;top:-5px;right:-5px;width:16px;height:16px;border-radius:50%;background:var(--accent);border:2px solid #0a0720;display:none}
 .mbtn.alert .dot{display:block}
 
+/* The tip-up flag: a big orange button that only exists while a flag is up on the ice */
+.flag{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(var(--sab) + 74px);z-index:5;font-family:var(--display);font-size:clamp(11px,2.6vmin,15px);
+  color:#fff;background:#ff5a1f;border:3px solid #fff;border-radius:999px;padding:12px 20px;cursor:pointer;display:flex;align-items:center;gap:8px;
+  box-shadow:0 6px 0 rgba(0,0,0,.35),0 10px 30px rgba(255,90,31,.45);animation:flagpulse .45s infinite alternate;touch-action:manipulation;text-shadow:1px 1px 0 rgba(0,0,0,.5)}
+.flag[hidden]{display:none}
+.flag .i{font-size:clamp(18px,4vmin,26px);line-height:1}
+.flag:active{transform:translateX(-50%) translateY(4px);box-shadow:0 2px 0 rgba(0,0,0,.35)}
+.portrait .flag{bottom:calc(var(--sab) + 210px)}
+@keyframes flagpulse{to{transform:translateX(-50%) scale(1.07)}}
+@media (prefers-reduced-motion:reduce){ .flag{animation:none} }
+
 /* The reel button, bottom-right. Round, red, big enough for a thumb. The water is a button too. */
 .act{position:absolute;right:calc(var(--sar) + 14px);bottom:calc(var(--sab) + 14px);z-index:4;width:clamp(96px,24vmin,136px);height:clamp(96px,24vmin,136px);
   border-radius:50%;border:3px solid rgba(255,255,255,.55);background:rgba(10,7,32,.45);color:#fff;font-family:var(--display);
@@ -353,6 +364,7 @@ canvas#scene{position:absolute;inset:0;width:100%;height:100%;display:block}
   </div>
 
   <button class="act" id="actBtn" type="button" aria-label="Cast, hook and reel"><span class="big" id="actBig">CAST</span><span class="sm" id="actSm">hold, then let go</span></button>
+  <button class="flag" id="flagBtn" type="button" hidden><span class="i" aria-hidden="true">🚩</span>FLAG UP! TAP!</button>
 
   <div class="layer screen" id="choose" hidden>
     <div class="choose-box" role="group" aria-label="Pick the word">
@@ -446,6 +458,7 @@ canvas#scene{position:absolute;inset:0;width:100%;height:100%;display:block}
       <button class="tab" role="tab" data-tab="boat" aria-selected="false" type="button">Boats</button>
       <button class="tab" role="tab" data-tab="look" aria-selected="false" type="button">Looks</button>
       <button class="tab" role="tab" data-tab="extra" aria-selected="false" type="button">Extras</button>
+      <button class="tab" role="tab" data-tab="ice" aria-selected="false" type="button" id="iceTab" hidden>❄️ Ice</button>
     </div>
     <div class="panel-body"><div class="grid" id="shopGrid"></div></div>
   </div>
@@ -820,13 +833,30 @@ const LURES=[
   // spinner blade over a two-hook pickerel spreader with a sinker. It spins through the whole
   // water column, every fish treats it as a favourite, and the blade flashes at night.
   {id:'wizard', name:'Wizard Rig', sub:'Spins and shines. Every fish wants it, deep or shallow.', price:0, depth:1, ico:'🪄', earned:'words', allDepths:true},
+  // Ice lures: sold in the Ice tab, which only shows on the ice. Every open-water lure still works
+  // down the hole; these are the winter specialists. On the ice the drop picks the depth, so what
+  // sets them apart is who wants them (ICE_WANT) and how they drop.
+  {id:'tjig', name:'Tungsten Jig', sub:'Tiny and heavy. Drops fast. Perch and crappie.', price:220, depth:0, ico:'⚫', ice:true, fast:true},
+  {id:'rattle', name:'Rattle Spoon', sub:'Rattles and flashes. Greenbacks come running.', price:360, depth:1, ico:'🔔', ice:true},
+  {id:'jigmin', name:'Jigging Minnow', sub:'Swims in circles. Pike and lake trout.', price:480, depth:2, ico:'🐟', ice:true},
 ];
 const EXTRAS=[
   {id:'hat', name:'Lucky Hat', sub:'More bites.', price:150, ico:'🧢'},
   {id:'finder', name:'Fish Finder', sub:'See the fish. Cast to the one you want!', price:300, ico:'📡'},
   {id:'net', name:'Big Net', sub:'Fish come in easier.', price:500, ico:'🥅'},
   {id:'lamp', name:'Headlamp', sub:'Fish at night too.', price:700, ico:'🔆'},
+  // Ice gear, Ice tab only
+  {id:'tipup', name:'Tip-Up', sub:'A second line in a second hole. Flag up means FISH!', price:500, ico:'🚩', ice:true},
+  {id:'flasher', name:'Flasher', sub:'Lights up the depth the fish are at.', price:450, ico:'📟', ice:true},
+  {id:'warmers', name:'Hand Warmers', sub:'Warm hands pull fish in faster.', price:200, ico:'🧤', ice:true},
 ];
+// Who wants the ice lures, and who takes the minnow on the tip-up
+const ICE_WANT={
+  tjig:  {perch:1.7,crappie:1.6,tullibee:1.5,sunfish:1.4,rockbass:1.3,whitefish:1.3,sauger:1.0},
+  rattle:{greenback:1.8,walleye:1.8,sauger:1.5,whitefish:1.3,drum:1.2,pike:1.2,laketrout:1.1},
+  jigmin:{pike:1.8,laketrout:1.7,muskie:1.4,greenback:1.2,walleye:1.2,burbot:1.1,smallmouth:1.1},
+};
+const TIP_WANT={pike:1.7,burbot:1.6,greenback:1.5,laketrout:1.4,walleye:1.4,muskie:1.3,sauger:1.0,whitefish:0.8,crappie:0.6,perch:0.5,tullibee:0.5};
 // Boats open spots. Every lake has three: the Shore (dock), the Weeds (paddle out; shallow fish,
 // bass and pike) and the Drop-off (motor out; deep fish, bigger ones, the rare ones closer).
 // Looks: outfits swap Bodie's toque and jacket (sprite sets under bodie/<outfit>/); the extras add
@@ -866,8 +896,10 @@ const WORD_BADGES=['words10','words50','jar1','jar5'];
 const earnNeeds=g=>g.earned==='words'?WORD_BADGES:[];
 const earnedOk=g=>earnNeeds(g).every(id=>S.badges.includes(id));
 // How much a fish wants a lure. The Wizard Rig is at least as good as the fish's favourite.
-function lureWant(f,L){
+function lureWant(sp,L){
+  const f=FISH[sp];
   if(L.id==='wizard') return Math.max(1.6,...Object.values(f.lures))+0.2;
+  if(L.ice) return (ICE_WANT[L.id]||{})[sp]||0.45;
   return f.lures[L.id]||0.45;
 }
 
@@ -895,6 +927,7 @@ const BADGES=[
   {id:'icegreen', ico:'💚', name:'Ice Greenback', sub:'A Master Angler greenback on the ice.', winter:true, test:s=>!!s.flags.iceGreenMa},
   {id:'iceburbot', ico:'🌌', name:'Eelpout Night', sub:'A burbot through the ice at night.', winter:true, test:s=>!!s.flags.iceBurbotNight},
   {id:'icegiant', ico:'🏔️', name:'Ice Giant', sub:'A giant fish through the ice.', winter:true, test:s=>!!s.flags.iceGiant},
+  {id:'iceflag', ico:'🚩', name:'Flag Up!', sub:'Catch a fish on the tip-up.', winter:true, test:s=>!!s.flags.tipFish},
   {id:'night', ico:'🌙', name:'Night Owl', sub:'Catch a fish at night.', test:s=>s.flags.night},
   {id:'rain', ico:'🌧️', name:'Rain Fish', sub:'Catch a fish in the rain.', test:s=>s.flags.rain},
   {id:'dawn', ico:'🌅', name:'Early Bird', sub:'Catch a fish before 8 AM.', test:s=>s.flags.dawn},
@@ -1022,7 +1055,7 @@ function addBait(n){
   S.bait=(S.bait||0)+n;
   if(S.bait>=JAR){
     S.bait-=JAR; S.jars=(S.jars||0)+1;
-    const missing=LURES.filter(l=>!l.earned&&!S.lures.includes(l.id));
+    const missing=LURES.filter(l=>!l.earned&&!l.ice&&!S.lures.includes(l.id));
     if(missing.length){ const l=pick(missing); S.lures.push(l.id); pop(W/2,H*0.45,'FULL JAR! FREE '+l.name.toUpperCase()+'!','good'); }
     else { S.coins+=60; pop(W/2,H*0.45,'FULL JAR! +60 COINS','good'); }
     Audio.badge(); checkBadges();
@@ -1089,8 +1122,19 @@ let rodTip={x:92,y:88};
 let castCount=0;
 let sayText='';
 const dockX=96;
-const baseX=()=>isIce()?dockX+150:dockX+spotById(S.spot).off;
+// On the ice Bodie stands at his jig hole, or (iceOff) over at the tip-up hole while he plays a
+// flag. Everything that follows him (hole, rod tip, line) hangs off baseX; the shack, bucket and
+// the tip-up itself stay put.
+const TIP_OFF=96;
+let iceOff=0, iceOffTarget=0;
+const baseX=()=>isIce()?dockX+150+iceOff:dockX+spotById(S.spot).off;
 const holeX=()=>baseX()+34;
+const iceHomeX=()=>dockX+150;
+const tipX=()=>iceHomeX()+34+TIP_OFF;
+const hasTipUp=()=>isIce()&&S.extras.includes('tipup');
+// The tip-up: a baited line in the second hole. wait counts down to the next look for a taker;
+// fish is the one on, flag is up while it waits for Bodie; flagT is how long it has waited.
+let tip={wait:12,fish:null,flag:false,flagT:0};
 
 // Depth bands in scene pixels.
 const BANDS=[[142,178],[182,228],[232,286]];
@@ -1142,9 +1186,11 @@ function updateShadows(){
   for(const s of shadows){
     if(s.hooked) continue;
     if(s.chasing){
-      // Swim to the lure, nibble, bite. Driven by the wait timer, not here.
-      const tx=lure.x+(s.dir>0?-10:10);
-      s.x=lerp(s.x,tx,dt*1.6); s.y=lerp(s.y,lure.y+4,dt*1.6);
+      // Swim to the lure, nibble, bite. Driven by the wait timer, not here. A fish on the tip-up
+      // heads for the minnow under the second hole instead.
+      const onTip=tip.fish&&tip.fish.shadow===s;
+      const tx=(onTip?tipX():lure.x)+(s.dir>0?-10:10), ty=onTip?BANDS[1][0]+18:lure.y+4;
+      s.x=lerp(s.x,tx,dt*1.6); s.y=lerp(s.y,ty,dt*1.6);
       continue;
     }
     s.x+=s.dir*s.speed*dt;
@@ -1247,26 +1293,25 @@ function drawScene(){
   if(S.spot==='drop'){ ctx.fillStyle='rgba(0,0,0,.3)'; ctx.beginPath(); ctx.moveTo(dockX+60,H); ctx.lineTo(dockX+120,H-14); ctx.lineTo(dockX+200,H-30); ctx.lineTo(W+BIG,H-30); ctx.lineTo(W+BIG,H); ctx.fill(); }
   ctx.fillStyle='rgba(0,0,0,.35)'; ctx.fillRect(-BIG,H-6,2*BIG+W,6);
   if(ice){
-    // Light through the hole, then the ice itself: a pale slab with cracks, snow drifts, the hole and a tip-up flag
-    const hx=holeX(); const lg=ctx.createLinearGradient(0,water.y,0,water.y+120); lg.addColorStop(0,'rgba(200,240,255,.28)'); lg.addColorStop(1,'rgba(200,240,255,0)');
-    ctx.fillStyle=lg; ctx.beginPath(); ctx.moveTo(hx-10,water.y+2); ctx.lineTo(hx+10,water.y+2); ctx.lineTo(hx+40,water.y+120); ctx.lineTo(hx-40,water.y+120); ctx.fill();
+    // Light through each hole, then the ice itself: a pale slab with cracks, snow drifts, the holes and the tip-up
+    const lg=ctx.createLinearGradient(0,water.y,0,water.y+120); lg.addColorStop(0,'rgba(200,240,255,.28)'); lg.addColorStop(1,'rgba(200,240,255,0)');
+    for(const hx of (S.extras.includes('tipup')?[iceHomeX()+34,tipX()]:[iceHomeX()+34])){ ctx.fillStyle=lg; ctx.beginPath(); ctx.moveTo(hx-10,water.y+2); ctx.lineTo(hx+10,water.y+2); ctx.lineTo(hx+40,water.y+120); ctx.lineTo(hx-40,water.y+120); ctx.fill(); }
     const ig=ctx.createLinearGradient(0,water.y-4,0,water.y+6); ig.addColorStop(0,'#f4f9ff'); ig.addColorStop(0.5,'#cfe3f2'); ig.addColorStop(1,'#8fb5cf');
     ctx.fillStyle=ig; ctx.fillRect(-BIG,water.y-4,2*BIG+W,10);
     ctx.strokeStyle='rgba(120,160,190,.5)'; ctx.lineWidth=0.8; ctx.beginPath(); for(let i=0;i<9;i++){ const cx=((i*131)%(W+200))-100; ctx.moveTo(cx,water.y-3); ctx.lineTo(cx+14+(i%3)*6,water.y+1); ctx.lineTo(cx+22,water.y+5); } ctx.stroke();
     ctx.fillStyle='#ffffff'; for(let i=0;i<7;i++){ const dx=((i*173)%(W+300))-150, dw=30+(i*17)%40; ctx.beginPath(); ctx.ellipse(dx,water.y-4,dw,3+(i%3),0,Math.PI,0); ctx.fill(); }
-    ctx.fillStyle='#0a2a36'; ctx.beginPath(); ctx.ellipse(hx,water.y+1,9,3.2,0,0,Math.PI*2); ctx.fill();
-    ctx.strokeStyle='#dff0fa'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.ellipse(hx,water.y+1,10,3.8,0,0,Math.PI*2); ctx.stroke();
-    // Tip-up: the flag springs up on a bite
-    const up=state==='bite'||state==='choose'||state==='fight';
-    ctx.fillStyle='#5a3a22'; ctx.fillRect(hx+13,water.y-6,2,6);
-    ctx.strokeStyle='#333'; ctx.lineWidth=1.2; ctx.beginPath(); ctx.moveTo(hx+14,water.y-6); ctx.lineTo(hx+14+(up?2:12),water.y-6-(up?16:2)); ctx.stroke();
-    ctx.fillStyle='#ff5a1f'; if(up){ ctx.fillRect(hx+16,water.y-24,8,6); } else { ctx.fillRect(hx+20,water.y-10,7,4); }
+    // The jig hole (it stays at the home spot; Bodie walks away from it to play a flag)
+    const jx=iceHomeX()+34;
+    ctx.fillStyle='#0a2a36'; ctx.beginPath(); ctx.ellipse(jx,water.y+1,9,3.2,0,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#dff0fa'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.ellipse(jx,water.y+1,10,3.8,0,0,Math.PI*2); ctx.stroke();
     // The shack behind him, with a stovepipe
-    const sx=baseX()-70; ctx.fillStyle='#b8402a'; ctx.fillRect(sx,water.y-38,34,34); ctx.fillStyle='#7a2a1a'; ctx.fillRect(sx,water.y-38,34,4); ctx.fillStyle='#f4f9ff'; ctx.beginPath(); ctx.moveTo(sx-3,water.y-38); ctx.lineTo(sx+17,water.y-50); ctx.lineTo(sx+37,water.y-38); ctx.fill();
+    const sx=iceHomeX()-70; ctx.fillStyle='#b8402a'; ctx.fillRect(sx,water.y-38,34,34); ctx.fillStyle='#7a2a1a'; ctx.fillRect(sx,water.y-38,34,4); ctx.fillStyle='#f4f9ff'; ctx.beginPath(); ctx.moveTo(sx-3,water.y-38); ctx.lineTo(sx+17,water.y-50); ctx.lineTo(sx+37,water.y-38); ctx.fill();
     ctx.fillStyle='#2a1c10'; ctx.fillRect(sx+22,water.y-30,8,26); ctx.fillStyle='#ffe08a'; ctx.fillRect(sx+6,water.y-30,8,7); ctx.fillStyle='#333'; ctx.fillRect(sx+26,water.y-58,4,12);
     ctx.fillStyle='rgba(255,255,255,.4)'; for(let i=0;i<4;i++){ const k=(time*0.35+i*0.25)%1; ctx.beginPath(); ctx.arc(sx+28+Math.sin(k*5)*3+k*8,water.y-60-k*22,2+k*3,0,Math.PI*2); ctx.fill(); }
     // A bucket beside the hole
-    ctx.fillStyle='#d8d8e0'; ctx.fillRect(baseX()+8,water.y-12,9,9); ctx.fillStyle='#8aa'; ctx.fillRect(baseX()+9,water.y-11,7,2);
+    ctx.fillStyle='#d8d8e0'; ctx.fillRect(iceHomeX()+8,water.y-12,9,9); ctx.fillStyle='#8aa'; ctx.fillRect(iceHomeX()+9,water.y-11,7,2);
+    if(S.extras.includes('tipup')) drawTipUp();
+    if(S.extras.includes('flasher')) drawFlasher(jx);
   }
   if(!ice&&S.spot==='weeds'){ ctx.fillStyle='rgba(60,140,70,.85)'; for(let i=0;i<7;i++){ const px=dockX+150+i*34+Math.sin(time*0.7+i)*2, py=water.y+1; ctx.beginPath(); ctx.ellipse(px,py,9,3.2,0,0.2,Math.PI*2-0.2); ctx.fill(); } }
   // Snow
@@ -1461,6 +1506,48 @@ function drawLooks(t){
 }
 // Bodie, with a pose for every moment: resting, winding up, casting, waiting, hooking, fighting,
 // cheering. Drawn in 2 px pixels so he reads as a sprite.
+// The tip-up over the second hole: a cross of slats on the ice, a spool hanging under it with the
+// line down to a minnow, and the spring flag. The flag lies flat along the frame until a fish
+// pulls the spool; then it springs straight up and waves until Bodie gets there.
+function drawTipUp(){
+  const x=tipX(), y=water.y;
+  ctx.fillStyle='#0a2a36'; ctx.beginPath(); ctx.ellipse(x,y+1,9,3.2,0,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='#dff0fa'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.ellipse(x,y+1,10,3.8,0,0,Math.PI*2); ctx.stroke();
+  // Line from the spool to the minnow, or to the fish that has it
+  const f=tip.fish&&tip.fish.shadow; const bx=f?f.x:x+Math.sin(time*0.8)*2, by=f?f.y-2:BANDS[1][0]+14;
+  ctx.strokeStyle='rgba(255,255,255,.6)'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(x,y+8); ctx.lineTo(bx,by); ctx.stroke();
+  if(!f){ ctx.fillStyle='#c9d6e2'; ctx.beginPath(); ctx.ellipse(bx,by+2,3.5,1.6,0,0,Math.PI*2); ctx.fill(); ctx.fillStyle='#222'; ctx.fillRect(bx+1.5,by+1,1,1); }
+  // Frame and spool
+  ctx.fillStyle='#8a5a30'; ctx.fillRect(x-16,y-7,32,3); ctx.fillStyle='#6a4220'; ctx.fillRect(x-1.5,y-7,3,12);
+  ctx.fillStyle='#333'; ctx.beginPath(); ctx.arc(x,y+7,3,0,Math.PI*2); ctx.fill(); ctx.fillStyle='#bbb'; ctx.beginPath(); ctx.arc(x,y+7,1.2,0,Math.PI*2); ctx.fill();
+  // Flag on its spring wire
+  const up=tip.flag, wob=up?Math.sin(time*9)*0.15:0;
+  ctx.save(); ctx.translate(x+13,y-7); ctx.rotate(up?-Math.PI/2+wob:-0.1);
+  ctx.strokeStyle='#333'; ctx.lineWidth=1.4; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(up?24:16,0); ctx.stroke();
+  ctx.fillStyle='#ff5a1f';
+  if(up){ const fl=Math.sin(time*12)*1.5; ctx.beginPath(); ctx.moveTo(11,0); ctx.lineTo(24,-7+fl); ctx.lineTo(24,7+fl); ctx.fill(); }
+  else ctx.fillRect(6,-4,10,4);
+  ctx.restore();
+  // A ring on the ice so the flag is impossible to miss
+  if(up){ const k=(time*1.5)%1; ctx.strokeStyle='rgba(255,90,31,'+(0.85*(1-k))+')'; ctx.lineWidth=2; ctx.beginPath(); ctx.ellipse(x,y-2,14+k*24,5+k*9,0,0,Math.PI*2); ctx.stroke(); }
+}
+// The flasher: a sonar unit on the ice with its cable down the jig hole, and a bar for each depth
+// band in the water that lights when a fish in that band is near the hole. Green, amber, red,
+// shallow to deep, like the real dial.
+function drawFlasher(hx){
+  const x=hx-20;
+  ctx.fillStyle='#2a2f3a'; ctx.fillRect(x-5,water.y-12,10,9); ctx.fillStyle='#58e070'; ctx.fillRect(x-3,water.y-10,6,3);
+  ctx.strokeStyle='rgba(20,20,30,.6)'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(x,water.y-3); ctx.lineTo(x,BANDS[0][0]-4); ctx.stroke();
+  const cols=['#58e070','#ffd23f','#ff4a3d'];
+  for(let d=0;d<3;d++){
+    const [a,b]=BANDS[d]; const near=shadows.filter(s=>s.d===d&&!s.hooked&&Math.abs(s.x-hx)<90).length;
+    ctx.fillStyle='rgba(10,7,32,.45)'; ctx.fillRect(x-3,a,6,b-a-4);
+    if(near){
+      ctx.globalAlpha=0.55+0.45*Math.abs(Math.sin(time*4+d)); ctx.fillStyle=cols[d]; ctx.fillRect(x-3,a,6,b-a-4); ctx.globalAlpha=1;
+      ctx.fillStyle='#fff'; for(let i=0;i<Math.min(near,3);i++) ctx.fillRect(x-1,a+6+i*9,2,4);
+    }
+  }
+}
 function drawBodie(){
   const lake=lakeById(S.lake); const spot=spotById(S.spot);
   const inBoat=!isIce()&&(spot.id!=='shore'||lake.shore==='islands');
@@ -1471,7 +1558,8 @@ function drawBodie(){
   let pose='idle';
   if(state==='charge') pose='charge'; else if(state==='cast') pose='cast'; else if(state==='wait') pose='wait';
   else if(state==='bite'||state==='choose') pose='bite'; else if(state==='fight') pose='fight'; else if(state==='land'||state==='card') pose='cheer';
-  const hop=pose==='bite'?-Math.abs(Math.sin(time*14))*4:pose==='cheer'?-Math.abs(Math.sin(time*9))*5:0;
+  const walking=isIce()&&iceOff!==iceOffTarget;
+  const hop=walking?-Math.abs(Math.sin(time*16))*3:pose==='bite'?-Math.abs(Math.sin(time*14))*4:pose==='cheer'?-Math.abs(Math.sin(time*9))*5:0;
   const lean=pose==='fight'?-4+Math.sin(time*18)*1.2:pose==='charge'?-3:pose==='cast'?3:0;
   const crouch=pose==='fight'?3:0;
   const set=(S.outfit!=='classic'&&SPR.outfits[S.outfit])||SPR.bodie;
@@ -1517,6 +1605,8 @@ function drawBodie(){
 }
 // The rod, from the hand: bends under load, swings back over the shoulder on the wind-up
 function drawRod(pose,hx,hy){
+  // At the tip-up there is no rod: the line runs from his hands to the hole
+  if(isIce()&&iceOff>0){ rodTip={x:hx,y:hy}; return; }
   ctx.strokeStyle='#d8c27a'; ctx.lineWidth=2.5; ctx.lineCap='round';
   const bend=pose==='fight'?clamp(fight.tension,0,1)*22:(pose==='charge'?power*8:0);
   let tx=rodTip.x, ty=rodTip.y+bend;
@@ -1564,7 +1654,7 @@ function drawWizardRig(x,y){
   ctx.restore();
 }
 function drawLine(){
-  if(state==='title'||state==='idle'||state==='charge'||state==='daydone'||state==='menu'||state==='land'||state==='card'){
+  if(state==='title'||state==='idle'||state==='charge'||state==='daydone'||state==='menu'||state==='land'||state==='card'||state==='run'){
     if(state==='charge'&&isIce()){
       // Depth pick: the jig would drop to this band
       const d=power<0.34?0:power<0.67?1:2, hx=holeX(), ty=BANDS[d][0]+10;
@@ -1594,13 +1684,17 @@ function drawLine(){
   else if(isIce()){ ctx.lineTo(holeX(),water.y); ctx.lineTo(lure.x,lure.y); }
   else { const sag=state==='fight'?-6:10; ctx.quadraticCurveTo((rodTip.x+bobber.x)/2,Math.min(rodTip.y,bobber.y)+sag,bobber.x,bobber.y); ctx.lineTo(lure.x,lure.y); }
   ctx.stroke();
-  // Lure
+  // Lure (on the tip-up line it is the minnow, whatever lure is on the rod)
   const L=lureById(S.lure);
-  if(L.id==='wizard') drawWizardRig(lure.x,lure.y);
+  if(isIce()&&iceOff>0){ ctx.fillStyle='#c9d6e2'; ctx.beginPath(); ctx.ellipse(lure.x,lure.y,3.5,1.6,0,0,Math.PI*2); ctx.fill(); ctx.fillStyle='#222'; ctx.fillRect(lure.x+1.5,lure.y-1,1,1); }
+  else if(L.id==='wizard') drawWizardRig(lure.x,lure.y);
   else {
-    ctx.fillStyle={worm:'#d26a6a',spinner:'#ffe28a',spoon:'#e0e0e0',jig:'#ff8a3d',crank:'#5fd3ff',frog:'#6fcf5f',stink:'#c9a54a',glow:'#b8ffb0',sucker:'#c8a070'}[L.id]||'#fff';
-    ctx.beginPath(); ctx.ellipse(lure.x,lure.y,4,2.5,0,0,Math.PI*2); ctx.fill();
+    // The jigging minnow swims a little circle under the hole; the rattle spoon flashes
+    const sw=L.id==='jigmin'&&state==='wait'&&lure.sunk?{x:Math.cos(time*3)*5,y:Math.sin(time*3)*2}:{x:0,y:0};
+    ctx.fillStyle={worm:'#d26a6a',spinner:'#ffe28a',spoon:'#e0e0e0',jig:'#ff8a3d',crank:'#5fd3ff',frog:'#6fcf5f',stink:'#c9a54a',glow:'#b8ffb0',sucker:'#c8a070',tjig:'#3a3f4a',rattle:'#ffd23f',jigmin:'#8fd4ff'}[L.id]||'#fff';
+    ctx.beginPath(); ctx.ellipse(lure.x+sw.x,lure.y+sw.y,L.id==='tjig'?2.6:4,L.id==='tjig'?2.2:2.5,0,0,Math.PI*2); ctx.fill();
     if(L.id==='glow'&&dayT()>1){ ctx.fillStyle='rgba(184,255,176,.25)'; ctx.beginPath(); ctx.arc(lure.x,lure.y,10,0,Math.PI*2); ctx.fill(); }
+    if(L.id==='rattle'&&(time*4)%1<0.2){ ctx.strokeStyle='rgba(255,255,255,.8)'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(lure.x-7,lure.y); ctx.lineTo(lure.x+7,lure.y); ctx.moveTo(lure.x,lure.y-6); ctx.lineTo(lure.x,lure.y+6); ctx.stroke(); }
   }
   // Bobber (open water only; on the ice the tip-up flag does the talking)
   if(state!=='cast'&&!isIce()){
@@ -1755,7 +1849,7 @@ function confetti(n){
   for(let i=0;i<n;i++) particles.push({x:rnd(W*0.2,W*0.8),y:rnd(-10,30),vx:rnd(-50,50),vy:rnd(20,90),r:rnd(2,4),life:rnd(1.2,2.2),max:2.2,c:pick(cols),slow:true});
 }
 function updateParticles(){
-  for(const p of particles){ p.vy+=(p.slow?60:380)*dt; p.x+=p.vx*dt+(p.slow?Math.sin(time*6+p.r)*20*dt:0); p.y+=p.vy*dt; p.life-=dt; }
+  for(const p of particles){ p.vy+=(p.bub?-30:p.slow?60:380)*dt; p.x+=p.vx*dt+(p.slow||p.bub?Math.sin(time*6+p.r)*20*dt:0); p.y+=p.vy*dt; p.life-=dt; }
   particles=particles.filter(p=>p.life>0&&p.y<H+40);
 }
 function setStatus(t){ statusEl.textContent=t; }
@@ -1773,7 +1867,7 @@ function updateHud(){
   const canUnlock=LAKES.some(l=>!S.unlocked.includes(l.id)&&unlockOk(l).ok);
   const newSpot=SPOTS.some(sp=>sp.needs&&S.boats.includes(sp.needs)&&!(S.flags['spot_'+sp.id]));
   $('lakesBtn').classList.toggle('alert',canUnlock||newSpot);
-  const canBuy=[...RODS,...REELS,...LURES,...BOATS,...OUTFITS,...LOOKS,...EXTRAS].some(g=>!owns(g)&&g.price>0&&g.price<=S.coins);
+  const canBuy=[...RODS,...REELS,...LURES,...BOATS,...OUTFITS,...LOOKS,...EXTRAS].some(g=>!owns(g)&&g.price>0&&g.price<=S.coins&&(!g.ice||isIce()));
   $('shopBtn').classList.toggle('alert',canBuy&&S.coins>=40);
   $('journalBtn').classList.toggle('alert',Object.keys(S.best).length>(S.seen.journal||0));
 }
@@ -1824,7 +1918,7 @@ function planBite(){
   for(const s of shadows){
     if(s.hooked||s.chasing) continue;
     const f=FISH[s.sp];
-    let w=lureWant(f,L)*(f.time[slot]||1.0);
+    let w=lureWant(s.sp,L)*(f.time[slot]||1.0);
     if(f.weather) w*=(f.weather[wx]||1.0);
     // The Wizard Rig spins through the whole column, so depth hardly matters to it.
     const dd=Math.abs(s.d-lure.depth); w*=L.allDepths?(dd===2?0.7:1):dd===0?1:dd===1?0.35:0.08;
@@ -1874,6 +1968,75 @@ function missBite(){
   Audio.lost(); bobber.dip=0; bitePending=null; day.streak=0;
   reelInEmpty('It swam off. Cast again!');
 }
+// ---------- The tip-up ----------
+// Every so often a fish near the second hole takes the minnow and the flag springs up. Bodie has
+// a while to get there (the clock only runs while he is free to go). Tapping the flag reels in
+// his own line, walks him over, and the fight starts on the tip-up line, hand over hand. Once
+// the fish is on the ice (or off), he walks back and the tip-up is set again.
+function updateTipUp(){
+  if(!hasTipUp()||!day||state==='title'||state==='daydone'||state==='menu'||state==='derbyCard') return;
+  const free=state==='idle'||state==='wait'||state==='charge';
+  if(tip.fish){
+    if(tip.flag&&free){ tip.flagT+=dt; if(tip.flagT>11) tipLetGo(); }
+    return;
+  }
+  if(iceOff>0||iceOffTarget>0) return;
+  tip.wait-=dt; if(tip.wait>0) return;
+  tip.wait=rnd(16,34);
+  if(!free) return;
+  const slot=timeSlot(), x=tipX(), cands=[];
+  for(const s of shadows){
+    if(s.hooked||s.chasing) continue;
+    const f=FISH[s.sp]; let w=(TIP_WANT[s.sp]||0.4)*(f.time[slot]||1);
+    const dist=Math.abs(s.x-x); w*=1/(1+(dist/100)*(dist/100));
+    cands.push({s,w});
+  }
+  const sum=cands.reduce((a,c)=>a+c.w,0);
+  if(!cands.length||Math.random()>clamp(0.4+sum*0.15,0.35,0.85)) return;
+  let r=Math.random()*sum, s=cands[cands.length-1].s; for(const c of cands){ r-=c.w; if(r<=0){ s=c.s; break; } }
+  s.chasing=true; s.dir=s.x<x?1:-1;
+  tip.fish={sp:s.sp,len:s.len,shadow:s}; tip.flag=true; tip.flagT=0;
+  Audio.bite(); cam.shake=3; pop(x,water.y-36,'FLAG!','big');
+  try{ if(navigator.vibrate) navigator.vibrate([40,60,40]); }catch(e){}
+  $('flagBtn').hidden=false;
+  if(state==='idle') setStatus('Flag up! Tap the flag!');
+}
+function tipLetGo(){
+  const s=tip.fish&&tip.fish.shadow; if(s){ s.chasing=false; s.dir=-s.dir; s.speed=40; }
+  tip.fish=null; tip.flag=false; tip.wait=rnd(14,28); $('flagBtn').hidden=true;
+  Audio.lost(); pop(tipX(),water.y-30,'it let go','bad');
+  if(state==='idle') setStatus('Too slow! The flag will pop again.');
+}
+function tipReset(){
+  const s=tip.fish&&tip.fish.shadow; if(s){ s.chasing=false; }
+  tip.fish=null; tip.flag=false; tip.wait=rnd(12,24); tip.flagT=0; $('flagBtn').hidden=true;
+  iceOff=0; iceOffTarget=0;
+}
+function answerFlag(){
+  if(!tip.flag||!tip.fish||!(state==='idle'||state==='wait'||state==='charge')) return;
+  Audio.ensure();
+  // His own line comes in; a drop in the water is given up, not counted
+  if(bitePending&&bitePending.shadow) bitePending.shadow.chasing=false;
+  bitePending=null; pressed=false; actBtn.classList.remove('down');
+  $('flagBtn').hidden=true;
+  state='run'; iceOffTarget=TIP_OFF; Audio.tick();
+  setStatus('Go go go!'); setAct('RUN!','');
+}
+// Done at the tip-up, one way or the other: set it again and walk home
+function leaveTipUp(){
+  const s=tip.fish&&tip.fish.shadow; if(s) s.chasing=false;
+  tip.fish=null; tip.flag=false; tip.wait=rnd(14,30); tip.flagT=0; $('flagBtn').hidden=true;
+  iceOffTarget=0;
+}
+function arriveAtFlag(){
+  const s=tip.fish.shadow;
+  bitePending={sp:tip.fish.sp,len:tip.fish.len,shadow:s};
+  bobber.x=holeX(); bobber.y=water.y; bobber.dip=6;
+  lure.x=holeX(); lure.y=BANDS[s.d][0]+10; lure.depth=s.d; lure.sunk=true;
+  state='bite'; Audio.hook(); cam.shake=4;
+  setHook();
+}
+$('flagBtn').addEventListener('click',answerFlag);
 function castLabel(){ setAct(isIce()?'DROP':'CAST',isIce()?'hold, let go at depth':'hold, then let go'); }
 function reelInEmpty(msg){
   state='idle';
@@ -1899,14 +2062,16 @@ function setHook(){
     prog:0.12, tension:0.1, red:0,
     pull:(0.12+strength*0.24)/rod.line,            // tension rise per second while reeling
     relax:0.7,                                     // tension fall per second when resting
-    reelRate:(0.2/(0.5+strength*0.6))*reel.speed*(S.extras.includes('net')?1.15:1),
+    reelRate:(0.2/(0.5+strength*0.6))*reel.speed*(S.extras.includes('net')?1.15:1)*(isIce()&&S.extras.includes('warmers')?1.15:1),
     drift:0.025+strength*0.02,                      // fish swims off when resting
     runIn:rnd(1.2,2.4), run:0, runs:0, runMax:Math.round(1+strength*2.2), runPower:1,
     t:0, dur:0, lastTick:0,
+    tipup:isIce()&&iceOff>0,                        // on the tip-up line: no rod, hand over hand
   };
   shadow.hooked=true;
   state='fight'; $('meter').hidden=false;
-  setStatus('Hold to reel! Let go when it runs!'); setAct('REEL','hold!');
+  if(fight.tipup){ setStatus('Pull the line! Let go when it runs!'); setAct('PULL','hold!'); }
+  else { setStatus('Hold to reel! Let go when it runs!'); setAct('REEL','hold!'); }
   emit('hook',{fish:sp,len});
 }
 function updateFight(){
@@ -1949,7 +2114,8 @@ function lineSnap(){
   endFight(); Audio.snap(); day.streak=0; cam.shake=8;
   const sh=fight.shadow; sh.hooked=false; sh.chasing=false; sh.dir=-sh.dir; sh.speed=45; sh.life=4;
   pop(bobber.x,water.y-20,'SNAP!','bad');
-  fight=null; bitePending=null;
+  const wasTip=fight.tipup; fight=null; bitePending=null;
+  if(wasTip) leaveTipUp();
   state='idle'; setStatus('The line broke! Let go when it is red. Try again!'); castLabel();
   endCastTick();
 }
@@ -1957,8 +2123,9 @@ function fishOff(){
   endFight(); Audio.lost(); day.streak=0;
   const sh=fight.shadow; sh.hooked=false; sh.chasing=false; sh.dir=-sh.dir; sh.speed=45; sh.life=4;
   pop(bobber.x,water.y-20,'got away','bad');
-  fight=null; bitePending=null;
-  state='idle'; setStatus('It got off. Keep reeling next time!'); castLabel();
+  const wasTip=fight.tipup; fight=null; bitePending=null;
+  if(wasTip) leaveTipUp();
+  state='idle'; setStatus(wasTip?'It got off the tip-up. Keep pulling next time!':'It got off. Keep reeling next time!'); castLabel();
   endCastTick();
 }
 
@@ -2013,6 +2180,7 @@ function landFish(){
   if(isMa){ tags.push(['MASTER ANGLER!','ma']); coins+=newMa?60:25; }
   if(sp===lake.legend&&len>=f.min+(f.max-f.min)*0.6) tags.push(['LAKE LEGEND!','']);
   if(fight.wordBonus){ tags.push(['WORD BONUS','']); coins+=5; }
+  if(fight.tipup){ tags.push(['TIP-UP!','']); S.flags.tipFish=true; }
   const tier=tierOf(sp,len), hadTier=S.tier[sp]===undefined?-1:S.tier[sp];
   if(tier>0&&tier>hadTier){ tags.push([TIERS[tier].ico+' '+TIERS[tier].name,'medal']); coins+=TIERS[tier].coins; }
   S.tier[sp]=Math.max(hadTier,tier);
@@ -2058,6 +2226,7 @@ function landFish(){
 function keepFishing(){
   if(state!=='card'||performance.now()-cardOpenedAt<cardLockMs) return;
   $('catch').hidden=true;
+  if(iceOff>0) leaveTipUp();
   state='idle'; setStatus(isIce()?'Drop it again!':'Cast again!'); castLabel();
   endCastTick();
   updateHud();
@@ -2093,6 +2262,7 @@ function grantEarned(){
 
 // ---------- Day end ----------
 function endDay(){
+  tipReset();
   if(day&&day.derby){ Audio.dayEnd(); setStatus(''); setAct('DAY DONE',''); $('meter').hidden=true; derbyAfterDay(); return; }
   state='daydone'; Audio.dayEnd();
   $('ddTitle').textContent=day.fish>0?'DAY DONE':'SLEEPY FISH';
@@ -2247,7 +2417,8 @@ function press(){
   Audio.ensure();
   if(state==='title'){ startGame(); return; }
   if(state==='card'){ keepFishing(); return; }
-  if(state==='spell'||state==='derbyCard') return;
+  if(state==='spell'||state==='derbyCard'||state==='run') return;
+  if(iceOff!==iceOffTarget) return;   // mid walk on the ice
   if(state==='daydone'){ startNewDay(); return; }
   if(state==='idle'){ if(day&&day.cast>=dayLen()){ maybeEndDay(); return; } startCharge(); return; }
   if(state==='bite'){ setHook(); return; }
@@ -2285,7 +2456,7 @@ for(const el of [actBtn,stageEl]) el.addEventListener('contextmenu',e=>e.prevent
 // ---------- Panels ----------
 let menuFrom='idle';
 function openPanel(id){
-  if(state==='fight'||state==='bite'||state==='cast'||state==='charge'||state==='choose'||state==='land') return;
+  if(state==='fight'||state==='bite'||state==='cast'||state==='charge'||state==='choose'||state==='land'||state==='run') return;
   if(state==='title'){ startGame(); }
   Audio.ensure();
   if(state!=='menu'){ menuFrom=state; }
@@ -2316,13 +2487,16 @@ let shopTab='lure';
 $('shopTabs').addEventListener('click',e=>{ const t=e.target.closest('.tab'); if(!t) return; shopTab=t.dataset.tab; renderShop(); });
 function renderShop(){
   $('shopCoins').textContent=S.coins+' COINS';
+  // The Ice tab only exists on the ice; off the ice, ice gear is not for sale or on show
+  $('iceTab').hidden=!isIce(); if(shopTab==='ice'&&!isIce()) shopTab='lure';
   document.querySelectorAll('#shopTabs .tab').forEach(t=>t.setAttribute('aria-selected',String(t.dataset.tab===shopTab)));
-  const list={lure:LURES,rod:RODS,reel:REELS,boat:BOATS,look:[...OUTFITS,...LOOKS],extra:EXTRAS}[shopTab];
+  const list={lure:LURES.filter(l=>!l.ice),rod:RODS,reel:REELS,boat:BOATS,look:[...OUTFITS,...LOOKS],extra:EXTRAS.filter(e=>!e.ice),ice:[...LURES.filter(l=>l.ice),...EXTRAS.filter(e=>e.ice)]}[shopTab];
   const g=$('shopGrid'); g.innerHTML='';
   list.forEach((it,idx)=>{
     const have=owns(it);
-    const inUse=(shopTab==='lure'&&S.lure===it.id)||(shopTab==='rod'&&S.rod===it.id)||(shopTab==='reel'&&S.reel===it.id)||((shopTab==='extra'||shopTab==='boat')&&have)||(shopTab==='look'&&(OUTFITS.includes(it)?S.outfit===it.id:have));
-    const prev=(shopTab==='rod'||shopTab==='reel')?idx>0&&!owns(list[idx-1]):false;
+    const kind=LURES.includes(it)?'lure':RODS.includes(it)?'rod':REELS.includes(it)?'reel':BOATS.includes(it)?'boat':OUTFITS.includes(it)?'outfit':LOOKS.includes(it)?'look':'extra';
+    const inUse=(kind==='lure'&&S.lure===it.id)||(kind==='rod'&&S.rod===it.id)||(kind==='reel'&&S.reel===it.id)||(kind==='outfit'&&S.outfit===it.id)||((kind==='extra'||kind==='boat'||kind==='look')&&have);
+    const prev=(kind==='rod'||kind==='reel')?idx>0&&!owns(list[idx-1]):false;
     const el=document.createElement('div'); el.className='item'+(inUse?' on':'')+(prev?' locked':'')+(it.earned?' rare':'');
     let action='', price=have?'':'<span class="pr">'+it.price+' COINS</span>';
     if(it.earned&&!have){
@@ -2330,8 +2504,8 @@ function renderShop(){
       const chips=earnNeeds(it).map(id=>{ const b=BADGES.find(x=>x.id===id); const ok=S.badges.includes(id); return '<span class="chip-s '+(ok?'ok':'no')+'">'+b.ico+' '+b.name+'</span>'; }).join('');
       price='<span class="pr">EARN IT</span><span class="sub">Get all 4 word badges.</span><span class="chips earn">'+chips+'</span>';
     }
-    else if(shopTab==='extra'||shopTab==='boat'||(shopTab==='look'&&LOOKS.includes(it))) action=have?'<span class="pr have">OWNED</span>':'<button class="mini" type="button" data-buy '+(S.coins<it.price?'disabled':'')+'>BUY</button>';
-    else if(have) action=inUse?'<span class="pr have">USING</span>':(shopTab==='lure'||shopTab==='look'?'<button class="mini use" type="button" data-use>USE</button>':'<span class="pr have">OWNED</span>');
+    else if(kind==='extra'||kind==='boat'||kind==='look') action=have?'<span class="pr have">OWNED</span>':'<button class="mini" type="button" data-buy '+(S.coins<it.price?'disabled':'')+'>BUY</button>';
+    else if(have) action=inUse?'<span class="pr have">USING</span>':(kind==='lure'||kind==='outfit'?'<button class="mini use" type="button" data-use>USE</button>':'<span class="pr have">OWNED</span>');
     else action='<button class="mini" type="button" data-buy '+(S.coins<it.price||prev?'disabled':'')+'>BUY</button>';
     el.innerHTML='<span class="ico" aria-hidden="true">'+it.ico+'</span><span class="nm">'+it.name+'</span><span class="sub">'+it.sub+'</span>'+price+action;
     el.querySelector('[data-buy]')?.addEventListener('click',()=>buy(it));
@@ -2473,6 +2647,9 @@ function travel(l,spotId){
   if(menuFrom==='wait'||menuFrom==='bite'){ bitePending=null; menuFrom='idle'; }
   const spot=spotById(spotId||'shore');
   S.lake=l.id; S.spot=spot.id; if(spot.needs) S.flags['spot_'+spot.id]=true;
+  tipReset();
+  // Ice lures stay on the ice: back in open water he is on his best regular lure
+  if(!isIce()&&lureById(S.lure).ice){ const reg=LURES.filter(x=>!x.ice&&S.lures.includes(x.id)); S.lure=(reg[reg.length-1]||LURES[0]).id; }
   persist(); spawnShadows(); updateHud(); checkBadges();
   closePanel();
   pop(W/2,H*0.4,(spot.id==='shore'?l.name:spot.name).toUpperCase(),'good');
@@ -2558,6 +2735,14 @@ function updateAmbientSound(){
 function update(){
   time+=dt;
   updateShadows(); updateParticles(); updateAmbientSound();
+  updateTipUp();
+  // Walking between the jig hole and the tip-up
+  if(iceOff!==iceOffTarget){
+    const d=Math.sign(iceOffTarget-iceOff); iceOff+=d*230*dt;
+    if((d>0&&iceOff>=iceOffTarget)||(d<0&&iceOff<=iceOffTarget)) iceOff=iceOffTarget;
+    if(Math.random()<dt*10) particles.push({x:baseX()-18+rnd(-8,8),y:water.y-3,vx:rnd(-20,20),vy:rnd(-40,-10),r:rnd(1,2),life:0.4,max:0.4,c:'rgba(255,255,255,.9)'});
+  }
+  if(state==='run'&&iceOff===iceOffTarget){ if(tip.fish) arriveAtFlag(); else { state='idle'; castLabel(); } }
   if(state==='charge'){
     chargeT+=dt*chargeDir*(reduced?0.9:1.25);
     if(chargeT>=1){ chargeT=1; chargeDir=-1; } if(chargeT<=0){ chargeT=0; chargeDir=1; }
@@ -2571,9 +2756,12 @@ function update(){
   }
   if(state==='wait'){
     waitT+=dt;
-    // Lure sinks to its depth
+    // Lure sinks to its depth. Down the hole it trails bubbles; a tungsten jig gets there fast.
     const ty=lure.sunk?lure.y:BANDS[lure.depth][0]+10;
-    if(!lure.sunk){ lure.y=lerp(lure.y,ty,dt*1.5); if(Math.abs(lure.y-ty)<1) lure.sunk=true; }
+    if(!lure.sunk){
+      lure.y=lerp(lure.y,ty,dt*(isIce()&&lureById(S.lure).fast?3.4:1.5)); if(Math.abs(lure.y-ty)<1) lure.sunk=true;
+      if(isIce()&&Math.random()<dt*16) particles.push({x:lure.x+rnd(-3,3),y:lure.y,vx:rnd(-6,6),vy:rnd(-26,-10),r:rnd(0.8,1.8),life:rnd(0.5,1.1),max:1.1,c:'rgba(220,240,255,.8)',bub:true});
+    }
     bobber.dip=lerp(bobber.dip,Math.sin(time*2.2)*1.2,dt*4);
     // Holding reels the lure back in
     if(pressed&&isIce()){ lure.y-=70*dt; lure.sunk=true; if(lure.y<=water.y+4){ if(bitePending&&bitePending.shadow){ bitePending.shadow.chasing=false; } bitePending=null; reelInEmpty('Drop it again!'); return; } }
