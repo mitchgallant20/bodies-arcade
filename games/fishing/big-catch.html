@@ -1,16 +1,15 @@
 <title>Bodie's Big Catch</title>
-<meta name="claude:viewport-fit-sides" content="cover">
 <style>
-/* Bodie's Big Catch. A side-view fishing cabinet: sky, shore and an aquarium cut of the lake, so
-   depth is something he can see. The 480x300 scene is the whole screen; HUD, cards, shop and
-   journal are DOM layers over it. Portrait: screen on top, menu buttons and one big action
-   button under it. Landscape: menu column left, screen in the middle, action button right.
-   Same night-purple cabinet as Purple Turtles (HANDOFF Section 17). */
+/* Bodie's Big Catch. The lake fills the whole screen; everything else floats over it.
+   The scene is drawn in world units (W x 300) through a camera that fits the world to the
+   viewport, follows the cast, punches in on the bite and shakes on the fight. HUD chips sit at
+   the top, menu chips bottom-left, the round reel button bottom-right, the status line between.
+   Panels (shop, book, badges, lakes, pause) and cards cover the screen. Night-purple palette
+   shared with Purple Turtles (HANDOFF Section 17). */
 :root{
   --bg:#150f30;
   --cab:#241a56;
   --cab-edge:#4a35a8;
-  --bezel:#0a0720;
   --fg:#f5f0ff;
   --muted:#b7a9ea;
   --accent:#ff4a3d;
@@ -23,77 +22,66 @@
   --bad:#ff6b6b;
   --card:#ffffff;
   --card-ink:#1d1538;
-  --water:#1b6fb8;
+  --glass:rgba(12,8,40,.55);
+  --glass-edge:rgba(255,255,255,.18);
   --display:'Press Start 2P','Courier New',monospace;
   --body:'Fredoka','Nunito','Segoe UI',system-ui,sans-serif;
-  --act-h:92px;
-  --gap:12px;
-  --bezel-w:720px;
+  --sat:env(safe-area-inset-top,0px);
+  --sar:env(safe-area-inset-right,0px);
+  --sab:env(safe-area-inset-bottom,0px);
+  --sal:env(safe-area-inset-left,0px);
   color-scheme:dark;
 }
 *{box-sizing:border-box}
 /* Nothing in a fishing game needs selecting. Without this, fast taps and long holds on iPhone
    grab a label (SHOP, LAKES, the fish name) and throw up the Copy / Look Up bar mid-fight. */
-html,body,.cab,.cab *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
-html,body{height:100%;overscroll-behavior:none}
-body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:17px;line-height:1.35;
-  padding-block:12px 16px;
-  padding-left:max(16px,env(safe-area-inset-left,0px));
-  padding-right:max(16px,env(safe-area-inset-right,0px));
-  display:flex;justify-content:center;align-items:center;
-  overflow:auto;touch-action:pan-y;
-  -webkit-tap-highlight-color:transparent;-webkit-text-size-adjust:100%}
-html.land body{overflow:hidden;touch-action:none;padding-block:8px}
+html,body,.stage,.stage *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+html{padding:0!important;height:100%;overscroll-behavior:none;background:var(--bg)}
+body{margin:0;height:100%;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:17px;line-height:1.35;
+  overflow:hidden;touch-action:none;-webkit-tap-highlight-color:transparent;-webkit-text-size-adjust:100%}
 
-.cab{display:grid;gap:var(--gap);width:var(--bezel-w);max-width:100%;min-width:0;
-  grid-template-areas:"stage stage" "menu act" "credit credit";
-  grid-template-columns:1fr 1fr;grid-template-rows:auto var(--act-h) auto}
-html.land .cab{width:100%;height:100%;grid-template-areas:"menu stage act";
-  grid-template-columns:1fr auto 1fr;grid-template-rows:100%;align-items:center}
-
-.bezel{grid-area:stage;width:100%;background:var(--cab);border:4px solid var(--cab-edge);border-radius:14px;padding:10px;
-  box-shadow:0 10px 0 #120c33, inset 0 0 0 2px #1a1240}
-html.land .bezel{width:var(--bezel-w)}
-.stage{position:relative;width:100%;aspect-ratio:480/300;background:var(--bezel);border-radius:6px;overflow:hidden;
-  touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;container-type:inline-size}
+.stage{position:fixed;inset:0;overflow:hidden;background:#0a0720;touch-action:none}
 canvas#scene{position:absolute;inset:0;width:100%;height:100%;display:block}
 .layer{position:absolute;inset:0}
 #fx{pointer-events:none;overflow:hidden;z-index:3}
-.pop{position:absolute;transform:translate(-50%,-100%);font-family:var(--display);font-size:9px;font-size:max(8px,2.2cqw);
+.pop{position:absolute;transform:translate(-50%,-100%);font-family:var(--display);font-size:clamp(9px,2.2vmin,14px);
   color:var(--warn);text-shadow:2px 2px 0 #000;white-space:nowrap;animation:rise 1s ease-out forwards}
 .pop.good{color:var(--good)}
 .pop.bad{color:var(--bad)}
-.pop.big{font-size:max(11px,3cqw)}
+.pop.big{font-size:clamp(12px,3vmin,20px)}
 @keyframes rise{from{opacity:1;margin-top:0}to{opacity:0;margin-top:-30px}}
 
-/* In-screen HUD */
-.hud{position:absolute;left:0;right:0;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:2cqw;
-  padding:1.2cqw 2cqw;background:linear-gradient(rgba(10,7,32,.72),rgba(10,7,32,.15));font-family:var(--display);pointer-events:none}
-.hud .cell{display:flex;flex-direction:column;gap:.9cqw;min-width:0}
-.hud .mid{text-align:center;align-items:center}
-.hud .lbl{font-size:8px;font-size:max(7px,1.8cqw);color:var(--muted);letter-spacing:.5px}
-.hud .val{font-size:12px;font-size:max(11px,2.8cqw);font-variant-numeric:tabular-nums;color:#fff;text-shadow:1px 1px 0 #000;line-height:1}
-.hud .val.small{font-size:8px;font-size:max(7px,1.9cqw);color:var(--turtle);line-height:1.3;text-shadow:1px 1px 0 #000}
+/* Glass chips: the shared look for everything floating over the water */
+.chip,.mbtn,.act,.gear,.status{backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+
+/* HUD across the top */
+.hud{position:absolute;left:0;right:0;top:0;z-index:4;display:flex;align-items:flex-start;justify-content:space-between;gap:8px;
+  padding:calc(var(--sat) + 8px) calc(var(--sar) + 10px) 0 calc(var(--sal) + 10px);font-family:var(--display);pointer-events:none}
+.hud .chip{display:flex;flex-direction:column;gap:4px;min-width:0;background:var(--glass);border:1px solid var(--glass-edge);border-radius:12px;padding:7px 11px}
+.hud .mid{align-items:center;text-align:center}
+.hud .lbl{font-size:clamp(7px,1.5vmin,9px);color:var(--muted);letter-spacing:.5px}
+.hud .val{font-size:clamp(11px,2.4vmin,15px);font-variant-numeric:tabular-nums;color:#fff;text-shadow:1px 1px 0 #000;line-height:1}
+.hud .val.small{font-size:clamp(8px,1.6vmin,10px);color:var(--turtle);line-height:1.3;text-shadow:1px 1px 0 #000}
 .hud .coin{color:var(--warn)}
-.gear{pointer-events:auto;flex:none;width:max(30px,6cqw);height:max(30px,6cqw);border-radius:50%;border:0;background:rgba(255,255,255,.14);
+.hud .right{display:flex;align-items:flex-start;gap:8px}
+.gear{pointer-events:auto;flex:none;width:40px;height:40px;border-radius:50%;border:1px solid var(--glass-edge);background:var(--glass);
   color:#fff;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;touch-action:manipulation}
-.gear svg{width:62%;height:62%}
-.gear:active{background:rgba(255,255,255,.3)}
+.gear svg{width:58%;height:58%}
+.gear:active{background:rgba(255,255,255,.25)}
 .gear:focus-visible{outline:3px solid var(--warn);outline-offset:2px}
-@container (max-width:430px){
-  .hud .lbl{display:none}
-  .hud .val{font-size:3.2cqw}
-  .hud .val.small{font-size:2.2cqw}
-}
+@media (max-width:520px){ .hud .lbl{display:none} .hud .chip{padding:6px 9px} }
 
-/* Status strip over the water */
-.status{position:absolute;left:0;right:0;bottom:0;z-index:2;margin:0;padding:1.2cqw 2cqw;text-align:center;
-  font-size:12px;font-size:max(12px,3.1cqw);font-weight:500;color:#fff;text-shadow:1px 1px 0 #000;
-  background:rgba(10,7,32,.55);pointer-events:none;min-height:1.6em}
+/* Status line, floating low and centred */
+.status{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(var(--sab) + 16px);z-index:4;margin:0;max-width:min(60vw,520px);
+  padding:8px 16px;border-radius:999px;background:var(--glass);border:1px solid var(--glass-edge);text-align:center;
+  font-size:clamp(13px,2.6vmin,18px);font-weight:600;color:#fff;text-shadow:1px 1px 0 #000;pointer-events:none;transition:opacity .2s}
+.status:empty{opacity:0}
+.portrait .status{bottom:calc(var(--sab) + 150px);max-width:86vw}
 
-/* Fight meter: progress on top, tension under it. Big, colour coded. */
-#meter{position:absolute;left:8%;right:8%;top:17%;z-index:2;pointer-events:none;display:flex;flex-direction:column;gap:max(4px,1cqw)}
-.bar{position:relative;height:max(12px,3.4cqw);border-radius:999px;background:rgba(10,7,32,.7);border:2px solid rgba(255,255,255,.35);overflow:hidden}
+/* Fight meter: progress on top, tension under it. Big, colour coded, just under the HUD. */
+#meter{position:absolute;left:50%;transform:translateX(-50%);top:calc(var(--sat) + 64px);width:min(70vw,560px);z-index:4;pointer-events:none;display:flex;flex-direction:column;gap:6px}
+.portrait #meter{top:calc(var(--sat) + 70px);width:86vw}
+.bar{position:relative;height:clamp(14px,3.4vmin,22px);border-radius:999px;background:rgba(10,7,32,.72);border:2px solid rgba(255,255,255,.4);overflow:hidden}
 .bar .fill{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:999px;transition:background-color .15s}
 #prog .fill{background:var(--good)}
 #tens .fill{background:var(--good)}
@@ -101,25 +89,51 @@ canvas#scene{position:absolute;inset:0;width:100%;height:100%;display:block}
 #tens.bad .fill{background:var(--bad)}
 #tens.bad{animation:buzz .12s infinite}
 @keyframes buzz{50%{transform:translateX(2px)}}
-.bar .tag{position:absolute;right:max(6px,1.4cqw);top:50%;transform:translateY(-50%);font-family:var(--display);font-size:max(7px,1.8cqw);color:#fff;text-shadow:1px 1px 0 #000}
-.bar .lead{position:absolute;left:max(6px,1.4cqw);top:50%;transform:translateY(-50%);font-family:var(--display);font-size:max(7px,1.8cqw);color:#fff;text-shadow:1px 1px 0 #000}
-#runTag{align-self:center;font-family:var(--display);font-size:max(9px,2.4cqw);color:var(--warn);text-shadow:2px 2px 0 #000;visibility:hidden}
+.bar .tag,.bar .lead{position:absolute;top:50%;transform:translateY(-50%);font-family:var(--display);font-size:clamp(7px,1.6vmin,10px);color:#fff;text-shadow:1px 1px 0 #000}
+.bar .tag{right:10px} .bar .lead{left:10px}
+#runTag{align-self:center;font-family:var(--display);font-size:clamp(10px,2.4vmin,15px);color:var(--warn);text-shadow:2px 2px 0 #000;visibility:hidden}
 #runTag.on{visibility:visible;animation:blink .25s infinite}
 @keyframes blink{50%{opacity:.2}}
 
+/* Menu chips, bottom-left */
+.menu{position:absolute;left:calc(var(--sal) + 12px);bottom:calc(var(--sab) + 12px);z-index:4;display:flex;gap:8px}
+.portrait .menu{flex-direction:row;left:calc(var(--sal) + 12px)}
+.mbtn{font-family:var(--body);font-weight:700;font-size:11px;color:#fff;background:var(--glass);border:1px solid var(--glass-edge);border-radius:14px;
+  width:clamp(52px,11vmin,66px);height:clamp(52px,11vmin,66px);padding:4px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;line-height:1;touch-action:manipulation;position:relative}
+.mbtn .i{font-size:clamp(18px,4.2vmin,24px);line-height:1}
+.mbtn:active{background:rgba(255,255,255,.25)}
+.mbtn:focus-visible{outline:3px solid var(--warn);outline-offset:3px}
+.mbtn .dot{position:absolute;top:-5px;right:-5px;width:16px;height:16px;border-radius:50%;background:var(--accent);border:2px solid #0a0720;display:none}
+.mbtn.alert .dot{display:block}
+
+/* The reel button, bottom-right. Round, red, big enough for a thumb. The water is a button too. */
+.act{position:absolute;right:calc(var(--sar) + 14px);bottom:calc(var(--sab) + 14px);z-index:4;width:clamp(96px,24vmin,136px);height:clamp(96px,24vmin,136px);
+  border-radius:50%;border:3px solid rgba(255,255,255,.35);background:rgba(255,74,61,.82);color:var(--accent-ink);font-family:var(--display);
+  cursor:pointer;box-shadow:0 8px 0 rgba(154,30,23,.9),0 10px 30px rgba(0,0,0,.35);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+  transition:transform .05s,box-shadow .05s;touch-action:none;padding:6px}
+.act .big{font-size:clamp(11px,2.8vmin,16px);line-height:1;text-align:center}
+.act .sm{font-family:var(--body);font-weight:600;font-size:clamp(10px,2vmin,13px);color:rgba(255,255,255,.9);text-align:center;line-height:1.1}
+.act.down,.act:active{transform:translateY(6px);box-shadow:0 2px 0 rgba(154,30,23,.9),0 4px 12px rgba(0,0,0,.35)}
+.act:focus-visible{outline:3px solid var(--warn);outline-offset:3px}
+.act.pulse{animation:pulse .5s infinite}
+@keyframes pulse{50%{transform:scale(1.06)}}
+
 /* Overlays */
 .screen{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
-  gap:max(6px,2cqw);padding:max(8px,2.2cqw);z-index:5}
-.screen.dim{background:rgba(10,7,32,.78)}
+  gap:clamp(6px,1.6vmin,12px);padding:calc(var(--sat) + 12px) calc(var(--sar) + 16px) calc(var(--sab) + 12px) calc(var(--sal) + 16px);z-index:5}
+.screen.dim{background:rgba(10,7,32,.72)}
 .screen h1,.screen h2{margin:0;font-family:var(--display);font-weight:400;text-wrap:balance;line-height:1.35}
-.kicker{font-family:var(--display);font-size:8px;font-size:max(8px,2cqw);color:var(--warn);letter-spacing:1px}
-.title-big{font-size:16px;font-size:max(16px,5cqw);color:#7fd3ff;text-shadow:3px 3px 0 #1a4f8a,6px 6px 0 #000}
-.tag{margin:0;font-size:13px;font-size:max(13px,3.2cqw);color:var(--fg);max-width:34ch}
-.hint{margin:0;font-size:11px;font-size:max(11px,2.6cqw);color:var(--muted);max-width:46ch}
-.best{font-family:var(--display);font-size:7px;font-size:max(7px,1.8cqw);color:var(--muted)}
+.kicker{font-family:var(--display);font-size:clamp(8px,2vmin,12px);color:var(--warn);letter-spacing:1px}
+.title-big{font-size:clamp(20px,7vmin,44px);color:#7fd3ff;text-shadow:3px 3px 0 #1a4f8a,6px 6px 0 #000}
+.tag{margin:0;font-size:clamp(14px,3vmin,20px);color:var(--fg);max-width:34ch}
+.hint{margin:0;font-size:clamp(11px,2.3vmin,15px);color:var(--muted);max-width:46ch}
+.best{font-family:var(--display);font-size:clamp(7px,1.7vmin,10px);color:var(--muted)}
 .best:empty{display:none}
-.btn{font-family:var(--display);font-size:10px;font-size:max(10px,2.4cqw);color:var(--accent-ink);background:var(--accent);border:0;border-radius:10px;
-  padding:max(10px,2.2cqw) max(16px,3.6cqw);min-height:44px;cursor:pointer;box-shadow:0 5px 0 var(--accent-shadow);transition:transform .05s;touch-action:manipulation}
+.fotd{display:inline-flex;align-items:center;gap:8px;font-family:var(--display);font-size:clamp(7px,1.7vmin,10px);color:var(--warn);background:var(--glass);border:1px solid var(--glass-edge);border-radius:999px;padding:6px 12px}
+.fotd:empty{display:none}
+.fotd canvas{width:36px;height:18px;display:block}
+.btn{font-family:var(--display);font-size:clamp(10px,2.4vmin,14px);color:var(--accent-ink);background:var(--accent);border:0;border-radius:12px;
+  padding:clamp(10px,2.2vmin,14px) clamp(16px,3.6vmin,24px);min-height:44px;cursor:pointer;box-shadow:0 5px 0 var(--accent-shadow);transition:transform .05s;touch-action:manipulation}
 .btn:active{transform:translateY(4px);box-shadow:0 1px 0 var(--accent-shadow)}
 .btn:focus-visible{outline:3px solid var(--warn);outline-offset:3px}
 .btn.ghost{background:#3b2b86;box-shadow:0 5px 0 #1b1340}
@@ -128,74 +142,83 @@ canvas#scene{position:absolute;inset:0;width:100%;height:100%;display:block}
 .row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
 @media (pointer:coarse){.kb{display:none}}
 @media (pointer:fine){.tp{display:none}}
+#title a[data-home]{position:static;margin-top:2px;font-size:clamp(8px,1.8vmin,10px);padding:9px 14px;min-height:0;line-height:1}
 
-/* Panels: shop, journal, badges, lakes, day done. Scroll inside the screen. */
-.panel{z-index:6;background:rgba(10,7,32,.92);display:flex;flex-direction:column;padding:0}
-.panel-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:max(6px,1.6cqw) max(8px,2cqw);
-  border-bottom:2px solid var(--cab-edge);background:var(--cab)}
-.panel-head h2{margin:0;font-family:var(--display);font-size:max(10px,2.6cqw);color:var(--warn);font-weight:400}
-.panel-head .coins{font-family:var(--display);font-size:max(9px,2.2cqw);color:var(--warn)}
-.x{font-family:var(--display);font-size:max(9px,2.2cqw);color:#fff;background:var(--accent);border:0;border-radius:8px;padding:max(8px,1.6cqw) max(12px,2.4cqw);
-  min-height:38px;cursor:pointer;box-shadow:0 4px 0 var(--accent-shadow);touch-action:manipulation}
+/* Panels: shop, book, badges, lakes. Full screen, scroll inside. */
+.panel{z-index:6;background:rgba(10,7,32,.94);display:flex;flex-direction:column;padding:0;
+  padding-top:var(--sat);padding-left:var(--sal);padding-right:var(--sar)}
+.panel-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px;border-bottom:2px solid var(--cab-edge);background:var(--cab)}
+.panel-head h2{margin:0;font-family:var(--display);font-size:clamp(11px,2.6vmin,16px);color:var(--warn);font-weight:400}
+.panel-head .coins{font-family:var(--display);font-size:clamp(9px,2.2vmin,13px);color:var(--warn)}
+.x{font-family:var(--display);font-size:clamp(9px,2.2vmin,13px);color:#fff;background:var(--accent);border:0;border-radius:8px;padding:10px 14px;
+  min-height:40px;cursor:pointer;box-shadow:0 4px 0 var(--accent-shadow);touch-action:manipulation}
 .x:active{transform:translateY(3px);box-shadow:0 1px 0 var(--accent-shadow)}
-.tabs{display:flex;gap:6px;padding:max(6px,1.4cqw) max(8px,2cqw) 0;flex-wrap:wrap}
-.tab{font-family:var(--body);font-weight:700;font-size:max(13px,2.9cqw);color:var(--muted);background:#1b1444;border:2px solid var(--cab-edge);border-radius:999px;
-  padding:max(6px,1.2cqw) max(12px,2.6cqw);min-height:36px;cursor:pointer;touch-action:manipulation}
+.tabs{display:flex;gap:6px;padding:10px 14px 0;flex-wrap:wrap}
+.tab{font-family:var(--body);font-weight:700;font-size:clamp(13px,2.6vmin,16px);color:var(--muted);background:#1b1444;border:2px solid var(--cab-edge);border-radius:999px;
+  padding:7px 14px;min-height:36px;cursor:pointer;touch-action:manipulation}
 .tab[aria-selected="true"]{color:#1d1538;background:var(--warn);border-color:var(--warn)}
-.panel-body{flex:1;overflow:auto;padding:max(8px,2cqw);-webkit-overflow-scrolling:touch;touch-action:pan-y}
-.grid{display:grid;gap:max(8px,1.8cqw);grid-template-columns:repeat(auto-fill,minmax(max(120px,27cqw),1fr))}
-.item{display:flex;flex-direction:column;align-items:center;gap:max(4px,1cqw);text-align:center;background:#1b1444;border:2px solid var(--cab-edge);border-radius:12px;padding:max(8px,1.8cqw)}
+.panel-body{flex:1;overflow:auto;padding:12px 14px calc(var(--sab) + 14px);-webkit-overflow-scrolling:touch;touch-action:pan-y}
+.grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+.item{display:flex;flex-direction:column;align-items:center;gap:5px;text-align:center;background:#1b1444;border:2px solid var(--cab-edge);border-radius:12px;padding:10px}
 .item.on{border-color:var(--good);box-shadow:0 0 0 2px rgba(88,224,112,.35)}
 .item.locked{opacity:.55}
-.item .ico{font-size:max(24px,6cqw);line-height:1}
-.item .ico canvas{display:block;width:max(64px,15cqw);height:max(36px,8.5cqw)}
-.item .nm{font-weight:700;font-size:max(14px,3.1cqw);color:#fff;line-height:1.15}
-.item .sub{font-size:max(11px,2.4cqw);color:var(--muted);line-height:1.2}
-.item .pr{font-family:var(--display);font-size:max(8px,2cqw);color:var(--warn)}
+.item .ico{font-size:30px;line-height:1}
+.item .nm{font-weight:700;font-size:16px;color:#fff;line-height:1.15}
+.item .sub{font-size:13px;color:var(--muted);line-height:1.2}
+.item .pr{font-family:var(--display);font-size:9px;color:var(--warn)}
 .item .pr.have{color:var(--good)}
-.mini{font-family:var(--display);font-size:max(8px,2cqw);color:#1d1538;background:var(--warn);border:0;border-radius:8px;padding:max(8px,1.6cqw) max(10px,2.2cqw);min-height:36px;min-width:72px;cursor:pointer;box-shadow:0 4px 0 #a9820f;touch-action:manipulation}
+.mini{font-family:var(--display);font-size:9px;color:#1d1538;background:var(--warn);border:0;border-radius:8px;padding:9px 12px;min-height:36px;min-width:72px;cursor:pointer;box-shadow:0 4px 0 #a9820f;touch-action:manipulation}
 .mini.use{background:var(--good);box-shadow:0 4px 0 #1f7a33}
 .mini.ghost{background:#3b2b86;color:#fff;box-shadow:0 4px 0 #1b1340}
 .mini[disabled]{opacity:.4;cursor:default}
 .mini:active{transform:translateY(3px);box-shadow:none}
 .chips{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
-.chip{font-weight:700;font-size:max(11px,2.5cqw);background:#2a2070;border-radius:999px;padding:3px 9px;color:#fff;white-space:nowrap}
-.chip.ok{background:#1f7a33}
-.chip.no{background:#6a1f2a}
-.fishcard{background:#1b1444;border:2px solid var(--cab-edge);border-radius:12px;padding:max(6px,1.4cqw);display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center}
+.chip-s{font-weight:700;font-size:12px;background:#2a2070;border-radius:999px;padding:3px 9px;color:#fff;white-space:nowrap}
+.chip-s.ok{background:#1f7a33}
+.chip-s.no{background:#6a1f2a}
+.fishcard{background:#1b1444;border:2px solid var(--cab-edge);border-radius:12px;padding:8px;display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center}
 .fishcard canvas{display:block;width:100%;aspect-ratio:2/1}
-.fishcard .nm{font-weight:700;font-size:max(13px,2.9cqw);color:#fff;line-height:1.1}
-.fishcard .sub{font-size:max(10px,2.3cqw);color:var(--muted);font-variant-numeric:tabular-nums}
+.fishcard .nm{font-weight:700;font-size:15px;color:#fff;line-height:1.1}
+.fishcard .sub{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
 .fishcard.unk .nm{color:var(--muted)}
-.fishcard .ma{font-family:var(--display);font-size:max(7px,1.7cqw);color:var(--warn)}
-.lakehead{grid-column:1/-1;font-family:var(--display);font-size:max(8px,2cqw);color:var(--turtle);margin:4px 0 0}
+.fishcard .ma{font-family:var(--display);font-size:8px;color:var(--warn)}
+.fishcard .medals{display:flex;gap:3px;font-size:16px;line-height:1}
+.fishcard .medals span{filter:grayscale(1) brightness(.45)}
+.fishcard .medals span.won{filter:none}
+.lakehead{grid-column:1/-1;font-family:var(--display);font-size:9px;color:var(--turtle);margin:6px 0 0}
 .lakehead:first-child{margin-top:0}
-.lake{display:grid;grid-template-columns:max(96px,24cqw) 1fr;gap:max(8px,2cqw);align-items:center;background:#1b1444;border:2px solid var(--cab-edge);border-radius:12px;padding:max(8px,1.8cqw);margin-bottom:max(8px,1.8cqw)}
+.lake{display:grid;grid-template-columns:110px 1fr;gap:12px;align-items:center;background:#1b1444;border:2px solid var(--cab-edge);border-radius:12px;padding:10px;margin-bottom:10px}
 .lake.here{border-color:var(--good)}
 .lake canvas{display:block;width:100%;aspect-ratio:16/10;border-radius:8px}
-.lake .nm{font-weight:700;font-size:max(15px,3.4cqw);color:#fff;line-height:1.1}
-.lake .sub{font-size:max(11px,2.5cqw);color:var(--muted);margin:2px 0 6px}
-.badge{display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center;background:#1b1444;border:2px solid var(--cab-edge);border-radius:12px;padding:max(8px,1.6cqw)}
-.badge .ico{font-size:max(26px,6.4cqw);line-height:1;filter:grayscale(1) brightness(.5)}
+.lake .nm{font-weight:700;font-size:17px;color:#fff;line-height:1.1}
+.lake .sub{font-size:13px;color:var(--muted);margin:2px 0 6px}
+.spots{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.spot{font-family:var(--body);font-weight:700;font-size:13px;color:#fff;background:#2a2070;border:2px solid var(--cab-edge);border-radius:999px;padding:6px 12px;min-height:34px;cursor:pointer;touch-action:manipulation}
+.spot.here{background:var(--good);color:#1d1538;border-color:var(--good)}
+.spot[disabled]{opacity:.5;cursor:default}
+.badge{display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center;background:#1b1444;border:2px solid var(--cab-edge);border-radius:12px;padding:10px}
+.badge .ico{font-size:30px;line-height:1;filter:grayscale(1) brightness(.5)}
 .badge.won{border-color:var(--warn)}
 .badge.won .ico{filter:none}
-.badge .nm{font-weight:700;font-size:max(12px,2.8cqw);color:#fff;line-height:1.1}
-.badge .sub{font-size:max(10px,2.3cqw);color:var(--muted);line-height:1.2}
+.badge .nm{font-weight:700;font-size:13px;color:#fff;line-height:1.1}
+.badge .sub{font-size:12px;color:var(--muted);line-height:1.2}
 
 /* Catch card */
 #catch{z-index:6}
-.catch-box{background:var(--card);color:var(--card-ink);border-radius:14px;padding:max(8px,2cqw) max(12px,2.8cqw);display:flex;flex-direction:column;align-items:center;gap:max(4px,1cqw);
-  max-width:92%;box-shadow:0 8px 0 #9a93c2;animation:cardIn .35s ease-out}
+.catch-box{background:var(--card);color:var(--card-ink);border-radius:18px;padding:14px 22px;display:flex;flex-direction:column;align-items:center;gap:6px;
+  max-width:min(92vw,520px);box-shadow:0 10px 0 #9a93c2,0 20px 50px rgba(0,0,0,.4);animation:cardIn .35s ease-out}
 @keyframes cardIn{from{transform:scale(.6);opacity:0}to{transform:none;opacity:1}}
-.catch-box canvas{display:block;width:max(180px,46cqw);height:max(72px,18cqw)}
-.catch-box .nm{font-weight:700;font-size:max(20px,5cqw);line-height:1;display:flex;align-items:center;gap:8px}
-.catch-box .sz{font-size:max(14px,3.2cqw);font-weight:600;color:#3a3560;font-variant-numeric:tabular-nums}
+.catch-box canvas{display:block;width:min(60vw,300px);height:auto;aspect-ratio:2.5/1}
+.catch-box .nm{font-weight:700;font-size:clamp(22px,5vmin,34px);line-height:1;display:flex;align-items:center;gap:10px}
+.catch-box .sz{font-size:clamp(14px,3vmin,19px);font-weight:600;color:#3a3560;font-variant-numeric:tabular-nums}
 .catch-box .tags{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
-.catch-box .tags span{font-family:var(--display);font-size:max(7px,1.8cqw);padding:5px 8px;border-radius:8px;background:var(--warn);color:#1d1538}
+.catch-box .tags span{font-family:var(--display);font-size:clamp(7px,1.8vmin,11px);padding:6px 9px;border-radius:8px;background:var(--warn);color:#1d1538}
 .catch-box .tags span.new{background:#2fae4c;color:#fff}
 .catch-box .tags span.ma{background:var(--accent);color:#fff}
 .catch-box .tags span.pb{background:#1b6fb8;color:#fff}
-.catch-box .coinsline{font-family:var(--display);font-size:max(9px,2.3cqw);color:#9a6b00}
+.catch-box .tags span.medal{background:#efe6ff;color:#1d1538}
+.catch-box .tags span.fotd{background:#f2c14e;color:#1d1538}
+.catch-box .coinsline{font-family:var(--display);font-size:clamp(9px,2.3vmin,13px);color:#9a6b00}
 .catch-box .btn{transition:opacity .25s}
 .catch-box.lock .btn{opacity:.35;pointer-events:none;box-shadow:0 5px 0 #176a2c}
 .speak{width:40px;height:40px;border-radius:50%;border:0;background:var(--turtle);color:#1d1538;cursor:pointer;box-shadow:0 4px 0 var(--turtle-shadow);display:inline-flex;align-items:center;justify-content:center;touch-action:manipulation;flex:none}
@@ -204,22 +227,22 @@ canvas#scene{position:absolute;inset:0;width:100%;height:100%;display:block}
 .speak:focus-visible{outline:3px solid var(--warn);outline-offset:2px}
 
 /* Day done */
-#daydone .box{background:rgba(10,7,32,.9);border:3px solid var(--warn);border-radius:12px;padding:max(8px,2cqw) max(12px,3cqw);display:flex;flex-direction:column;align-items:center;gap:max(6px,1.4cqw);max-width:94%}
-#daydone .big{font-family:var(--display);font-size:max(12px,3.4cqw);color:var(--warn)}
-.sumrow{display:flex;gap:max(10px,3cqw);flex-wrap:wrap;justify-content:center}
+#daydone .box{background:rgba(10,7,32,.92);border:3px solid var(--warn);border-radius:16px;padding:14px 22px;display:flex;flex-direction:column;align-items:center;gap:8px;max-width:min(94vw,560px)}
+#daydone .big{font-family:var(--display);font-size:clamp(13px,3.4vmin,22px);color:var(--warn)}
+.sumrow{display:flex;gap:clamp(12px,3vmin,24px);flex-wrap:wrap;justify-content:center}
 .sumrow div{display:flex;flex-direction:column;align-items:center;gap:2px}
-.sumrow .n{font-family:var(--display);font-size:max(12px,3.2cqw);color:#fff}
-.sumrow .l{font-size:max(11px,2.5cqw);color:var(--muted)}
-#daydone canvas{display:block;width:max(120px,32cqw);height:max(48px,12.8cqw)}
+.sumrow .n{font-family:var(--display);font-size:clamp(12px,3.2vmin,20px);color:#fff}
+.sumrow .l{font-size:clamp(11px,2.5vmin,15px);color:var(--muted)}
+#daydone canvas{display:block;width:min(44vw,220px);height:auto;aspect-ratio:2.5/1}
 
-/* Word mode choose panel (same as Purple Turtles) */
-#choose{justify-content:flex-start;padding-top:10%;z-index:7}
-.choose-box{background:rgba(10,7,32,.9);border:3px solid var(--warn);border-radius:10px;padding:max(8px,2cqw) max(10px,2.6cqw);display:flex;flex-direction:column;gap:max(8px,2cqw);max-width:96%}
+/* Word mode choose panel */
+#choose{justify-content:flex-start;padding-top:calc(var(--sat) + 10vh);z-index:7}
+.choose-box{background:rgba(10,7,32,.9);border:3px solid var(--warn);border-radius:14px;padding:12px 16px;display:flex;flex-direction:column;gap:12px;max-width:96vw}
 .choose-head{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap}
-.choose-head p{margin:0;font-size:12px;font-size:max(12px,3cqw)}
-.cards{display:flex;gap:max(8px,2cqw);justify-content:center;flex-wrap:wrap}
-.card{font-family:var(--body);font-weight:700;font-size:18px;font-size:max(18px,5cqw);color:var(--card-ink);background:var(--card);border:0;border-radius:12px;
-  padding:max(8px,1.8cqw) max(14px,3.4cqw);min-width:max(72px,16cqw);min-height:44px;cursor:pointer;box-shadow:0 5px 0 #9a93c2;transition:transform .08s;touch-action:manipulation}
+.choose-head p{margin:0;font-size:clamp(13px,3vmin,18px)}
+.cards{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.card{font-family:var(--body);font-weight:700;font-size:clamp(20px,5vmin,32px);color:var(--card-ink);background:var(--card);border:0;border-radius:12px;
+  padding:10px 22px;min-width:88px;min-height:48px;cursor:pointer;box-shadow:0 5px 0 #9a93c2;transition:transform .08s;touch-action:manipulation}
 .card:active{transform:translateY(3px)}
 .card:focus-visible{outline:4px solid var(--warn);outline-offset:2px}
 .card.right{background:var(--good);animation:popCard .4s ease-out}
@@ -228,42 +251,39 @@ canvas#scene{position:absolute;inset:0;width:100%;height:100%;display:block}
 @keyframes shake{20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
 
 /* Settings / pause */
-.set-box{background:rgba(10,7,32,.9);border:3px solid var(--cab-edge);border-radius:12px;padding:max(10px,2.4cqw) max(14px,3cqw);display:flex;flex-direction:column;gap:max(8px,2cqw);max-width:94%;max-height:96%;overflow:auto;text-align:left}
-.opt{display:flex;gap:12px;align-items:flex-start;font-size:max(13px,3cqw);cursor:pointer;min-height:44px}
+.set-box{background:rgba(10,7,32,.92);border:3px solid var(--cab-edge);border-radius:14px;padding:14px 18px;display:flex;flex-direction:column;gap:12px;max-width:min(94vw,560px);max-height:96%;overflow:auto;text-align:left}
+.opt{display:flex;gap:12px;align-items:flex-start;font-size:clamp(14px,3vmin,18px);cursor:pointer;min-height:44px}
 .opt input{width:26px;height:26px;flex:none;accent-color:var(--accent);margin:2px 0 0}
-.opt small{display:block;color:var(--muted);font-size:max(11px,2.4cqw);font-weight:500;line-height:1.3}
-.fine{margin:0;font-size:max(11px,2.3cqw);color:var(--muted);line-height:1.4}
+.opt small{display:block;color:var(--muted);font-size:clamp(12px,2.4vmin,14px);font-weight:500;line-height:1.3}
+.fine{margin:0;font-size:clamp(12px,2.3vmin,14px);color:var(--muted);line-height:1.4}
 .fine a{color:inherit}
 
-/* Cabinet controls under / beside the screen */
-.menu{grid-area:menu;display:grid;grid-template-columns:1fr 1fr;gap:8px;min-width:0}
-html.land .menu{grid-template-columns:1fr;align-self:stretch;align-content:center}
-.mbtn{font-family:var(--body);font-weight:700;font-size:15px;color:#fff;background:var(--cab);border:3px solid var(--cab-edge);border-radius:14px;
-  min-height:42px;padding:4px 6px;cursor:pointer;box-shadow:0 5px 0 #120c33;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;line-height:1;touch-action:manipulation;position:relative}
-.mbtn .i{font-size:20px;line-height:1}
-.mbtn:active{transform:translateY(4px);box-shadow:0 1px 0 #120c33}
-.mbtn:focus-visible{outline:3px solid var(--warn);outline-offset:3px}
-.mbtn .dot{position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:var(--accent);border:2px solid var(--bg);display:none}
-.mbtn.alert .dot{display:block}
-html.land .mbtn{min-height:0;flex:1;max-height:88px}
-.act{grid-area:act;font-family:var(--display);font-size:12px;color:var(--accent-ink);background:var(--accent);border:0;border-radius:22px;
-  cursor:pointer;box-shadow:0 7px 0 var(--accent-shadow);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
-  min-height:var(--act-h);transition:transform .05s;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;position:relative}
-.act .big{font-size:clamp(13px,3.6vmin,22px);line-height:1}
-.act .sm{font-family:var(--body);font-weight:600;font-size:clamp(12px,2.8vmin,16px);color:rgba(255,255,255,.85)}
-.act.down,.act:active{transform:translateY(5px);box-shadow:0 2px 0 var(--accent-shadow)}
-.act:focus-visible{outline:3px solid var(--warn);outline-offset:3px}
-html.land .act{height:min(100%,520px);min-height:0;border-radius:18px}
-.credit{grid-area:credit;margin:0;text-align:center;font-size:12px;color:var(--muted);line-height:1.3}
-.credit a{color:inherit}
-html.land .credit{display:none}
-
 @media (prefers-reduced-motion:reduce){
-  .pop,.catch-box,#tens.bad,#runTag.on{animation:none}
+  .pop,.catch-box,#tens.bad,#runTag.on,.act.pulse{animation:none}
 }
 </style>
 
-<div class="cab" id="cab">
+<div class="stage" id="stage">
+  <canvas id="scene" aria-label="A lake, seen from the side, with Bodie fishing"></canvas>
+  <div class="layer" id="fx" aria-hidden="true"></div>
+
+  <div class="hud" aria-label="Coins, lake, time and fish">
+    <div class="chip"><span class="lbl">COINS</span><span class="val coin" id="coins">0</span></div>
+    <div class="chip mid"><span class="val" id="lakeLbl">THE DOCK</span><span class="val small" id="timeLbl">6 AM</span></div>
+    <div class="right">
+      <div class="chip"><span class="lbl">TODAY</span><span class="val" id="dayFish">0 FISH</span></div>
+      <button class="gear" id="gearBtn" type="button" aria-label="Pause and settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M10 2h4l.6 3.1 1.9 1.1 3-1 2 3.5-2.4 2.1v2.4l2.4 2.1-2 3.5-3-1-1.9 1.1L14 22h-4l-.6-3.1-1.9-1.1-3 1-2-3.5 2.4-2.1v-2.4L2.5 8.7l2-3.5 3 1 1.9-1.1zm2 6.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z"/></svg></button>
+    </div>
+  </div>
+
+  <div id="meter" hidden>
+    <div class="bar" id="prog"><div class="fill"></div><span class="lead">FISH</span><span class="tag">NET</span></div>
+    <div class="bar" id="tens"><div class="fill"></div><span class="lead">LINE</span><span class="tag" id="tensTag">OK</span></div>
+    <span id="runTag">IT'S RUNNING! LET GO!</span>
+  </div>
+
+  <p class="status" id="status" aria-live="polite">Press PLAY to start</p>
+
   <div class="menu" aria-label="Menus">
     <button class="mbtn" id="shopBtn" type="button"><span class="i" aria-hidden="true">🎣</span>SHOP<span class="dot"></span></button>
     <button class="mbtn" id="journalBtn" type="button"><span class="i" aria-hidden="true">🐟</span>FISH<span class="dot"></span></button>
@@ -271,159 +291,169 @@ html.land .credit{display:none}
     <button class="mbtn" id="lakesBtn" type="button"><span class="i" aria-hidden="true">🗺️</span>LAKES<span class="dot"></span></button>
   </div>
 
-  <div class="bezel">
-    <div class="stage" id="stage">
-      <canvas id="scene" width="480" height="300" aria-label="A lake, seen from the side, with Bodie fishing from the dock"></canvas>
-      <div class="layer" id="fx" aria-hidden="true"></div>
+  <button class="act" id="actBtn" type="button" aria-label="Cast, hook and reel"><span class="big" id="actBig">CAST</span><span class="sm" id="actSm">hold, then let go</span></button>
 
-      <div class="hud" aria-label="Coins, lake, time and fish">
-        <div class="cell"><span class="lbl">COINS</span><span class="val coin" id="coins">0</span></div>
-        <div class="cell mid"><span class="val" id="lakeLbl">THE DOCK</span><span class="val small" id="timeLbl">6 AM</span></div>
-        <div class="cell"><span class="lbl">TODAY</span><span class="val" id="dayFish">0 FISH</span></div>
-        <button class="gear" id="gearBtn" type="button" aria-label="Pause and settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M10 2h4l.6 3.1 1.9 1.1 3-1 2 3.5-2.4 2.1v2.4l2.4 2.1-2 3.5-3-1-1.9 1.1L14 22h-4l-.6-3.1-1.9-1.1-3 1-2-3.5 2.4-2.1v-2.4L2.5 8.7l2-3.5 3 1 1.9-1.1zm2 6.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z"/></svg></button>
+  <div class="layer screen" id="choose" hidden>
+    <div class="choose-box" role="group" aria-label="Pick the word">
+      <div class="choose-head">
+        <p id="choosePrompt">Tap the word to set the hook!</p>
+        <button class="speak" id="speakBtn" type="button" aria-label="Hear the word again"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 9v6h4l5 4V5L7 9zm11.5 3a3.5 3.5 0 0 0-2-3.2v6.4a3.5 3.5 0 0 0 2-3.2zm-2-7v2.1a5 5 0 0 1 0 9.8V19a7 7 0 0 0 0-14z"/></svg></button>
       </div>
+      <div class="cards" id="cards"></div>
+    </div>
+  </div>
 
-      <div id="meter" hidden>
-        <div class="bar" id="prog"><div class="fill"></div><span class="lead">FISH</span><span class="tag">NET</span></div>
-        <div class="bar" id="tens"><div class="fill"></div><span class="lead">LINE</span><span class="tag" id="tensTag">OK</span></div>
-        <span id="runTag">IT'S RUNNING! LET GO!</span>
+  <div class="layer screen dim" id="title">
+    <span class="kicker">BODIE'S</span>
+    <h1 class="title-big">BIG CATCH</h1>
+    <p class="tag">Cast. Wait for the bite. Reel it in!</p>
+    <button class="btn" id="playBtn" type="button">PLAY</button>
+    <p class="hint"><span class="tp">Hold the big button to cast. Tap it when the bobber dips. Hold to reel, let go when the fish runs.</span><span class="kb">Hold SPACE to cast. Tap it when the bobber dips. Hold to reel, let go when the fish runs.</span></p>
+    <span class="fotd" id="fotdTitle"></span>
+    <span class="best" id="bestTitle"></span>
+    <a class="btn ghost" href="../" data-home>HOME</a>
+  </div>
+
+  <div class="layer screen dim" id="catch" hidden>
+    <div class="catch-box">
+      <div class="tags" id="catchTags"></div>
+      <canvas id="catchArt" width="300" height="120" aria-hidden="true"></canvas>
+      <div class="nm"><span id="catchName">Perch</span><button class="speak" id="sayBtn" type="button" aria-label="Hear the fish name"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 9v6h4l5 4V5L7 9zm11.5 3a3.5 3.5 0 0 0-2-3.2v6.4a3.5 3.5 0 0 0 2-3.2zm-2-7v2.1a5 5 0 0 1 0 9.8V19a7 7 0 0 0 0-14z"/></svg></button></div>
+      <div class="sz" id="catchSize">22 cm, 1 lb</div>
+      <div class="coinsline" id="catchCoins">+8 COINS</div>
+      <button class="btn good" id="keepBtn" type="button">KEEP FISHING</button>
+    </div>
+  </div>
+
+  <div class="layer screen dim" id="daydone" hidden>
+    <div class="box">
+      <span class="big" id="ddTitle">DAY DONE</span>
+      <p class="tag" id="ddLine">What a day!</p>
+      <canvas id="ddArt" width="300" height="120" aria-hidden="true"></canvas>
+      <div class="sumrow">
+        <div><span class="n" id="ddFish">0</span><span class="l">fish</span></div>
+        <div><span class="n" id="ddBig">0 cm</span><span class="l">biggest</span></div>
+        <div><span class="n" id="ddCoins">0</span><span class="l">coins</span></div>
       </div>
-
-      <p class="status" id="status" aria-live="polite">Press PLAY to start</p>
-
-      <div class="layer screen" id="choose" hidden>
-        <div class="choose-box" role="group" aria-label="Pick the word">
-          <div class="choose-head">
-            <p id="choosePrompt">Tap the word to set the hook!</p>
-            <button class="speak" id="speakBtn" type="button" aria-label="Hear the word again"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 9v6h4l5 4V5L7 9zm11.5 3a3.5 3.5 0 0 0-2-3.2v6.4a3.5 3.5 0 0 0 2-3.2zm-2-7v2.1a5 5 0 0 1 0 9.8V19a7 7 0 0 0 0-14z"/></svg></button>
-          </div>
-          <div class="cards" id="cards"></div>
-        </div>
-      </div>
-
-      <div class="layer screen dim" id="title">
-        <span class="kicker">BODIE'S</span>
-        <h1 class="title-big">BIG CATCH</h1>
-        <p class="tag">Cast. Wait for the bite. Reel it in!</p>
-        <button class="btn" id="playBtn" type="button">PLAY</button>
-        <p class="hint"><span class="tp">Hold the big button to cast. Tap it when the bobber dips. Hold to reel, let go when the fish runs.</span><span class="kb">Hold SPACE to cast. Tap it when the bobber dips. Hold to reel, let go when the fish runs.</span></p>
-        <span class="best" id="bestTitle"></span>
+      <div class="chips" id="ddBadges"></div>
+      <div class="row">
+        <button class="btn" id="newDayBtn" type="button">NEW DAY</button>
         <a class="btn ghost" href="../" data-home>HOME</a>
-      </div>
-
-      <div class="layer screen dim" id="catch" hidden>
-        <div class="catch-box">
-          <div class="tags" id="catchTags"></div>
-          <canvas id="catchArt" width="240" height="96" aria-hidden="true"></canvas>
-          <div class="nm"><span id="catchName">Perch</span><button class="speak" id="sayBtn" type="button" aria-label="Hear the fish name"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 9v6h4l5 4V5L7 9zm11.5 3a3.5 3.5 0 0 0-2-3.2v6.4a3.5 3.5 0 0 0 2-3.2zm-2-7v2.1a5 5 0 0 1 0 9.8V19a7 7 0 0 0 0-14z"/></svg></button></div>
-          <div class="sz" id="catchSize">22 cm, 1 lb</div>
-          <div class="coinsline" id="catchCoins">+8 COINS</div>
-          <button class="btn good" id="keepBtn" type="button">KEEP FISHING</button>
-        </div>
-      </div>
-
-      <div class="layer screen dim" id="daydone" hidden>
-        <div class="box">
-          <span class="big" id="ddTitle">DAY DONE</span>
-          <p class="tag" id="ddLine">What a day!</p>
-          <canvas id="ddArt" width="240" height="96" aria-hidden="true"></canvas>
-          <div class="sumrow">
-            <div><span class="n" id="ddFish">0</span><span class="l">fish</span></div>
-            <div><span class="n" id="ddBig">0 cm</span><span class="l">biggest</span></div>
-            <div><span class="n" id="ddCoins">0</span><span class="l">coins</span></div>
-          </div>
-          <div class="chips" id="ddBadges"></div>
-          <div class="row">
-            <button class="btn" id="newDayBtn" type="button">NEW DAY</button>
-            <a class="btn ghost" href="../" data-home>HOME</a>
-          </div>
-        </div>
-      </div>
-
-      <div class="layer panel" id="shop" hidden>
-        <div class="panel-head"><h2>SHOP</h2><span class="coins" id="shopCoins">0 COINS</span><button class="x" type="button" data-close>DONE</button></div>
-        <div class="tabs" id="shopTabs" role="tablist">
-          <button class="tab" role="tab" data-tab="lure" aria-selected="true" type="button">Lures</button>
-          <button class="tab" role="tab" data-tab="rod" aria-selected="false" type="button">Rods</button>
-          <button class="tab" role="tab" data-tab="reel" aria-selected="false" type="button">Reels</button>
-          <button class="tab" role="tab" data-tab="extra" aria-selected="false" type="button">Extras</button>
-        </div>
-        <div class="panel-body"><div class="grid" id="shopGrid"></div></div>
-      </div>
-
-      <div class="layer panel" id="journal" hidden>
-        <div class="panel-head"><h2>FISH BOOK</h2><span class="coins" id="journalCount">0 / 0</span><button class="x" type="button" data-close>DONE</button></div>
-        <div class="panel-body"><div class="grid" id="journalGrid"></div></div>
-      </div>
-
-      <div class="layer panel" id="badges" hidden>
-        <div class="panel-head"><h2>BADGES</h2><span class="coins" id="badgeCount">0 / 0</span><button class="x" type="button" data-close>DONE</button></div>
-        <div class="panel-body"><div class="grid" id="badgeGrid"></div></div>
-      </div>
-
-      <div class="layer panel" id="lakes" hidden>
-        <div class="panel-head"><h2>LAKES</h2><span class="coins" id="lakesCoins">0 COINS</span><button class="x" type="button" data-close>DONE</button></div>
-        <div class="panel-body" id="lakeList"></div>
-      </div>
-
-      <div class="layer screen dim" id="settings" hidden>
-        <div class="set-box">
-          <span class="kicker" id="pauseLbl">PAUSED</span>
-          <label class="opt"><input type="checkbox" id="soundToggle" checked><span>Sound effects</span></label>
-          <label class="opt"><input type="checkbox" id="readingToggle"><span>Word mode (sight words)<small>When a fish bites, Bodie hears a word and taps the one that matches to set the hook. Wrong picks never cost a thing; the fish waits.</small></span></label>
-          <div class="row">
-            <button class="btn" id="resumeBtn" type="button">RESUME</button>
-            <button class="btn ghost" id="endDayBtn" type="button">END DAY</button>
-            <a class="btn ghost" href="../" data-home>HOME</a>
-          </div>
-          <p class="fine">Lures pick the depth. Rods cast farther. Reels pull faster. Master Angler sizes are Manitoba's real ones. Grown-ups: settings and the reading guide live in <a href="../dad/">Dad's Corner</a>.</p>
-          <p class="fine"><button class="mini ghost" id="resetBtn" type="button">START OVER</button> <span id="resetNote"></span></p>
-        </div>
       </div>
     </div>
   </div>
 
-  <button class="act" id="actBtn" type="button" aria-label="Cast, hook and reel"><span class="big" id="actBig">CAST</span><span class="sm" id="actSm">hold, then let go</span></button>
+  <div class="layer panel" id="shop" hidden>
+    <div class="panel-head"><h2>SHOP</h2><span class="coins" id="shopCoins">0 COINS</span><button class="x" type="button" data-close>DONE</button></div>
+    <div class="tabs" id="shopTabs" role="tablist">
+      <button class="tab" role="tab" data-tab="lure" aria-selected="true" type="button">Lures</button>
+      <button class="tab" role="tab" data-tab="rod" aria-selected="false" type="button">Rods</button>
+      <button class="tab" role="tab" data-tab="reel" aria-selected="false" type="button">Reels</button>
+      <button class="tab" role="tab" data-tab="boat" aria-selected="false" type="button">Boats</button>
+      <button class="tab" role="tab" data-tab="extra" aria-selected="false" type="button">Extras</button>
+    </div>
+    <div class="panel-body"><div class="grid" id="shopGrid"></div></div>
+  </div>
 
-  <p class="credit">Hold to cast. Tap when the bobber dips. Hold to reel, let go when the fish runs.</p>
+  <div class="layer panel" id="journal" hidden>
+    <div class="panel-head"><h2>FISH BOOK</h2><span class="coins" id="journalCount">0 / 0</span><button class="x" type="button" data-close>DONE</button></div>
+    <div class="panel-body"><div class="grid" id="journalGrid"></div></div>
+  </div>
+
+  <div class="layer panel" id="badges" hidden>
+    <div class="panel-head"><h2>BADGES</h2><span class="coins" id="badgeCount">0 / 0</span><button class="x" type="button" data-close>DONE</button></div>
+    <div class="panel-body"><div class="grid" id="badgeGrid"></div></div>
+  </div>
+
+  <div class="layer panel" id="lakes" hidden>
+    <div class="panel-head"><h2>LAKES</h2><span class="coins" id="lakesCoins">0 COINS</span><button class="x" type="button" data-close>DONE</button></div>
+    <div class="panel-body" id="lakeList"></div>
+  </div>
+
+  <div class="layer screen dim" id="settings" hidden>
+    <div class="set-box">
+      <span class="kicker" id="pauseLbl">PAUSED</span>
+      <label class="opt"><input type="checkbox" id="soundToggle" checked><span>Sound effects</span></label>
+      <label class="opt"><input type="checkbox" id="readingToggle"><span>Word mode (sight words)<small>When a fish bites, Bodie hears a word and taps the one that matches to set the hook. Wrong picks never cost a thing; the fish waits.</small></span></label>
+      <div class="row">
+        <button class="btn" id="resumeBtn" type="button">RESUME</button>
+        <button class="btn ghost" id="endDayBtn" type="button">END DAY</button>
+        <a class="btn ghost" href="../" data-home>HOME</a>
+      </div>
+      <p class="fine">Lures pick the depth. Rods cast farther. Reels pull faster. Boats open new spots. Master Angler sizes are Manitoba's real ones. Grown-ups: settings and the reading guide live in <a href="../dad/">Dad's Corner</a>.</p>
+      <p class="fine"><button class="mini ghost" id="resetBtn" type="button">START OVER</button> <span id="resetNote"></span></p>
+    </div>
+  </div>
 </div>
 
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
-const W=480,H=300;
+// World units: H is fixed at 300; W is set once at boot from the screen's shape (wider phones get
+// more water to cast into). The camera maps world units onto the full-screen canvas.
+let W=480; const H=300;
 const canvas=$('scene'), ctx=canvas.getContext('2d');
 const stageEl=$('stage'), fxEl=$('fx'), statusEl=$('status');
 const coinsEl=$('coins'), lakeLbl=$('lakeLbl'), timeLbl=$('timeLbl'), dayFishEl=$('dayFish');
 const actBtn=$('actBtn'), actBig=$('actBig'), actSm=$('actSm');
 const reduced=(()=>{ try{ return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){ return false; } })();
 
-// ---------- Layout: size the screen to the phone ----------
-const landMQ=window.matchMedia('(orientation: landscape) and (max-height: 600px)');
+// ---------- Layout and camera ----------
+// The canvas is the whole viewport. In landscape the world's height fits the screen and W is
+// chosen so the world is exactly as wide as the view; in portrait the world's width fits and the
+// sky and deep water extend above and below. cam.x/cam.y is the world point at screen centre.
+const view={w:0,h:0,dpr:1,base:1,portrait:false};
+const cam={x:240,y:150,zoom:1,shake:0,tx:240,ty:150,tzoom:1};
+let worldSized=false;
 function layout(){
-  const land=landMQ.matches;
-  document.documentElement.classList.toggle('land',land);
-  const b=document.body, cs=getComputedStyle(b);
-  const availW=b.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight);
-  const availH=b.clientHeight-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom);
-  const CH=28, GAP=12;
-  let w;
-  if(land){
-    const side=Math.max(72,Math.min(150,availW*0.16));
-    w=Math.min(availW-2*side-2*GAP,(availH-CH)*1.6+CH);
-  } else {
-    const credit=document.querySelector('.credit').offsetHeight||20;
-    w=Math.min(availW,760,(availH-92-GAP*2-credit-CH)*1.6+CH);
+  view.w=Math.max(1,window.innerWidth); view.h=Math.max(1,window.innerHeight);
+  view.dpr=Math.min(3,window.devicePixelRatio||1);
+  view.portrait=view.h>view.w;
+  document.documentElement.classList.toggle('portrait',view.portrait);
+  if(!worldSized){
+    // Pick the world width once; shadows and casts live in these units for the whole session.
+    W=view.portrait?480:clamp(Math.round(H*view.w/view.h),480,720);
+    worldSized=true; cam.x=cam.tx=W/2;
   }
-  w=Math.max(220,Math.floor(w));
-  document.documentElement.style.setProperty('--bezel-w',w+'px');
+  view.base=view.portrait?(view.w/W)*1.3:view.h/H;
+  canvas.width=Math.round(view.w*view.dpr); canvas.height=Math.round(view.h*view.dpr);
+}
+function worldToScreen(x,y){
+  const Z=view.base*cam.zoom;
+  return {x:(x-cam.x)*Z+view.w/2,y:(y-cam.y)*Z+view.h/2};
+}
+function applyCamera(){
+  const Z=view.base*cam.zoom*view.dpr;
+  const sx=(Math.random()-0.5)*cam.shake, sy=(Math.random()-0.5)*cam.shake;
+  ctx.setTransform(Z,0,0,Z,view.dpr*view.w/2-(cam.x+sx)*Z,view.dpr*view.h/2-(cam.y+sy)*Z);
+}
+function updateCamera(){
+  // Where the camera wants to be, by state. Portrait leaves room under the water for the buttons.
+  const visW0=view.w/view.base;
+  const anchor=view.portrait?Math.min(W/2,visW0/2+20):W/2;
+  let tx=anchor, ty=view.portrait?H*0.46:H/2, tz=1;
+  const follow=view.portrait?0.85:0.35;
+  if(state==='charge'){ tz=1.02; tx=anchor+(power-0.5)*20; }
+  if(state==='cast'){ tx=lerp(anchor,lure.x,follow); tz=1.03; }
+  if(state==='wait'){ tx=lerp(anchor,bobber.x,follow*0.9); tz=1.06; ty-=6; }
+  if(state==='bite'||state==='choose'){ tx=lerp(anchor,bobber.x,Math.max(follow,0.55)); tz=1.3; ty=lerp(ty,water.y+10,0.5); }
+  if(state==='fight'){ tx=lerp(anchor,bobber.x,Math.max(follow,0.5)); tz=1.18; ty=lerp(ty,water.y+20,0.4); }
+  if(state==='land'){ tx=lerp(anchor,bobber.x,Math.max(follow,0.5)); tz=1.12; }
+  if(state==='title'){ tz=1.0; }
+  // Keep the world edges off screen when zoomed in; the dock should never slide out of view
+  const visW=view.w/(view.base*tz);
+  if(visW<W) tx=clamp(tx,visW/2,W-visW/2); else tx=W/2;
+  cam.tx=tx; cam.ty=ty; cam.tzoom=tz;
+  const k=reduced?1:Math.min(1,dt*4);
+  cam.x=lerp(cam.x,cam.tx,k); cam.y=lerp(cam.y,cam.ty,k); cam.zoom=lerp(cam.zoom,cam.tzoom,k);
+  cam.shake=Math.max(0,cam.shake-dt*18);
+  if(reduced) cam.shake=0;
 }
 let layoutQueued=false;
 function queueLayout(){ if(layoutQueued) return; layoutQueued=true; requestAnimationFrame(()=>{ layoutQueued=false; layout(); }); }
 window.addEventListener('resize',queueLayout);
 window.addEventListener('orientationchange',()=>{ queueLayout(); setTimeout(layout,250); setTimeout(layout,600); });
 if(window.visualViewport) window.visualViewport.addEventListener('resize',queueLayout);
-try{ landMQ.addEventListener('change',queueLayout); }catch(e){}
 
 // ---------- Audio (little bleeps, same synth family as Purple Turtles) ----------
 let speechUnlocked=false;
@@ -599,6 +629,21 @@ const EXTRAS=[
   {id:'net', name:'Big Net', sub:'Fish come in easier.', price:500, ico:'🥅'},
   {id:'lamp', name:'Headlamp', sub:'Fish at night too.', price:700, ico:'🔆'},
 ];
+// Boats open spots. Every lake has three: the Shore (dock), the Weeds (paddle out; shallow fish,
+// bass and pike) and the Drop-off (motor out; deep fish, bigger ones, the rare ones closer).
+const BOATS=[
+  {id:'canoe', name:'Canoe', sub:'Paddle out to the Weeds.', price:2000, ico:'🛶'},
+  {id:'tin', name:'Tin Boat', sub:'Motor out to the Drop-off.', price:6000, ico:'🚤'},
+];
+const SPOTS=[
+  {id:'shore', name:'Shore', lbl:'', needs:null, off:0},
+  {id:'weeds', name:'The Weeds', lbl:'THE WEEDS', needs:'canoe', off:70},
+  {id:'drop', name:'The Drop-off', lbl:'THE DROP-OFF', needs:'tin', off:135},
+];
+const spotById=id=>SPOTS.find(x=>x.id===id)||SPOTS[0];
+// Size medals within a species: how far up its range a fish is.
+const TIERS=[{id:'bronze',ico:'🥉',name:'BRONZE',min:0,coins:0},{id:'silver',ico:'🥈',name:'SILVER!',min:0.35,coins:15},{id:'gold',ico:'🥇',name:'GOLD!',min:0.6,coins:30},{id:'giant',ico:'💎',name:'GIANT!',min:0.85,coins:60}];
+function tierOf(sp,len){ const f=FISH[sp]; const k=(len-f.min)/(f.max-f.min); let t=0; TIERS.forEach((T,i)=>{ if(k>=T.min) t=i; }); return t; }
 const rodById=id=>RODS.find(r=>r.id===id)||RODS[0];
 const reelById=id=>REELS.find(r=>r.id===id)||REELS[0];
 const lureById=id=>LURES.find(r=>r.id===id)||LURES[0];
@@ -633,6 +678,12 @@ const BADGES=[
   {id:'musk', ico:'🐉', name:'Muskie!', sub:'Catch a muskie. The king.', test:s=>!!s.best.muskie},
   {id:'gear', ico:'🛒', name:'New Rod', sub:'Buy a rod.', test:s=>s.rod!=='stick'},
   {id:'box', ico:'🧰', name:'Tackle Box', sub:'Own 5 lures.', test:s=>s.lures.length>=5},
+  {id:'gold5', ico:'🥇', name:'Gold Rush', sub:'Gold medals on 5 kinds.', test:s=>Object.values(s.tier).filter(t=>t>=2).length>=5},
+  {id:'giant1', ico:'💎', name:'Giant!', sub:'Catch a giant fish.', test:s=>Object.values(s.tier).some(t=>t>=3)},
+  {id:'giant5', ico:'🏔️', name:'Giant Hunter', sub:'Giants of 5 kinds.', test:s=>Object.values(s.tier).filter(t=>t>=3).length>=5},
+  {id:'canoe', ico:'🛶', name:'Paddler', sub:'Buy the canoe.', test:s=>s.boats.includes('canoe')},
+  {id:'tin', ico:'🚤', name:'Captain', sub:'Buy the tin boat.', test:s=>s.boats.includes('tin')},
+  {id:'fotd3', ico:'📅', name:'Day Fish', sub:'Catch the fish of the day 3 times.', test:s=>s.fotdCount>=3},
   {id:'words10', ico:'🔤', name:'Word Hook', sub:'Get 10 words right.', test:s=>s.words>=10},
   {id:'words50', ico:'🗣️', name:'Word Champ', sub:'Get 50 words right.', test:s=>s.words>=50},
 ];
@@ -643,10 +694,14 @@ const DEF=()=>({
   rod:'stick', reel:'old', lures:['worm'], lure:'worm', extras:[],
   lake:'dock', unlocked:['dock'], badges:[], trips:0, bestDay:0, bestStreak:0, words:0,
   flags:{}, seen:{badges:0,journal:0},
+  spot:'shore', boats:[], tier:{}, fotd:{date:'',done:false}, fotdCount:0,
 });
 let S=Object.assign(DEF(),load('bbc_save',{}));
 if(!S.flags) S.flags={};
 if(!S.seen) S.seen={badges:0,journal:0};
+if(!S.boats) S.boats=[]; if(!S.spot) S.spot='shore'; if(!S.tier) S.tier={}; if(!S.fotd) S.fotd={date:'',done:false}; if(!S.fotdCount) S.fotdCount=0;
+// Older saves: give medals for the best fish already in the book
+for(const sp of Object.keys(S.best)) if(S.tier[sp]===undefined) S.tier[sp]=tierOf(sp,S.best[sp]);
 function persist(){
   save('bbc_save',S);
   save('bbc_fish',S.total); save('bbc_bigcm',Math.round(S.bigcm)); save('bbc_best',S.total);
@@ -655,7 +710,7 @@ function persist(){
 const statsForBadges=()=>({
   total:S.total, bigcm:S.bigcm, maCount:Object.keys(S.ma).length, species:Object.keys(S.best).length,
   unlocked:S.unlocked, flags:S.flags, bestStreak:S.bestStreak, bestDay:S.bestDay, best:S.best,
-  rod:S.rod, lures:S.lures, words:S.words,
+  rod:S.rod, lures:S.lures, words:S.words, tier:S.tier, boats:S.boats, fotdCount:S.fotdCount,
 });
 
 // ---------- Reading mode (sight words) ----------
@@ -670,6 +725,15 @@ function setReading(on){
   READING.enabled=!!on; $('readingToggle').checked=READING.enabled; save('bbc_reading',READING.enabled);
 }
 
+// ---------- Fish of the day ----------
+function todayKey(){ const d=new Date(); return d.getFullYear()*10000+(d.getMonth()+1)*100+d.getDate(); }
+function fishOfDay(){
+  const pool=[]; for(const l of LAKES) if(S.unlocked.includes(l.id)) for(const sp of l.fish) if(!pool.includes(sp)) pool.push(sp);
+  const k=todayKey(); let h=k*2654435761%4294967296; h=(h^(h>>>13))>>>0;
+  return pool[h%pool.length];
+}
+function fotdFresh(){ const k=String(todayKey()); if(S.fotd.date!==k){ S.fotd={date:k,done:false}; } return !S.fotd.done; }
+
 // ---------- Day / trip state ----------
 const CASTS_PER_DAY=15, NIGHT_CASTS=5;
 let day=null;
@@ -681,6 +745,7 @@ function newDay(){
   updateHud();
   const tip={sun:'Sunny day. Bass and perch like the sun.',cloud:'Cloudy day. Walleye and pike are out.',rain:'Rainy day. Walleye bite in the rain!'}[w];
   setStatus(tip);
+  if(fotdFresh()){ const fd=FISH[fishOfDay()].name; setTimeout(()=>{ if(state==='idle') setStatus('Fish of the day: '+fd+'! Triple coins!'); },3200); }
 }
 function dayLen(){ return CASTS_PER_DAY+(S.extras.includes('lamp')?NIGHT_CASTS:0); }
 function dayT(){ return day?day.cast/CASTS_PER_DAY:0; }           // 0 = 6 AM, 1 = 9 PM, >1 night
@@ -709,6 +774,7 @@ let rodTip={x:92,y:88};
 let castCount=0;
 let sayText='';
 const dockX=96;
+const baseX=()=>dockX+spotById(S.spot).off;
 
 // Depth bands in scene pixels.
 const BANDS=[[142,178],[182,228],[232,286]];
@@ -729,7 +795,13 @@ function spawnShadows(){
 }
 function pickSpecies(lake){
   const slot=timeSlot(), wx=day?day.weather:'sun';
-  const cands=lake.fish.map(sp=>{ const f=FISH[sp]; let w=SHADOW_RARITY[f.rarity]*(f.time[slot]||1); if(f.weather) w*=(f.weather[wx]||1); return {sp,w}; });
+  const spot=S.spot;
+  const cands=lake.fish.map(sp=>{
+    const f=FISH[sp]; let w=SHADOW_RARITY[f.rarity]*(f.time[slot]||1); if(f.weather) w*=(f.weather[wx]||1);
+    if(spot==='weeds') w*=f.depth.includes(0)?1.6:0.6;
+    if(spot==='drop'){ w*=f.depth.includes(2)?1.6:0.6; if(f.rarity>=3) w*=1.3; }
+    return {sp,w};
+  });
   const sum=cands.reduce((a,c)=>a+c.w,0);
   let r=Math.random()*sum;
   for(const c of cands){ r-=c.w; if(r<=0) return c.sp; }
@@ -744,7 +816,8 @@ function makeShadow(lake,anywhere){
   const dir=rare?-1:(Math.random()<0.5?-1:1);
   const x=anywhere?rnd(rare?farLimit()+20:dockX+30,W-10):(dir>0?-40:W+40);
   const far=x>dockX+0.6*(W-dockX);
-  const roll=sizeRoll(lake.bonus+d*0.05+(far?0.06:0)+(slot==='dawn'||slot==='dusk'?0.04:0));
+  const spotBonus=S.spot==='drop'?0.08:S.spot==='weeds'&&f.depth.includes(0)?0.04:0;
+  const roll=sizeRoll(lake.bonus+d*0.05+(far?0.06:0)+spotBonus+(slot==='dawn'||slot==='dusk'?0.04:0));
   const len=clamp(f.min+(f.max-f.min)*roll,f.min,f.max);
   return {sp,len,d,x,y:bandY(d),dir,speed:rnd(10,22)*(f.shape==='pike'?0.8:f.shape==='muskie'?0.7:1),wig:Math.random()*6,turn:0,hooked:false,chasing:false,life:rnd(20,60)};
 }
@@ -795,44 +868,71 @@ function drawScene(){
   const lake=lakeById(S.lake);
   const sky=skyColors();
   const t=dayT();
+  const BIG=4000;                                  // the world is drawn out past its edges so the camera never shows the void
+  const par=cam.x-W/2;                             // camera pan, for parallax
+  ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,canvas.width,canvas.height);
+  applyCamera();
   // Sky
-  let g=ctx.createLinearGradient(0,0,0,water.y);
+  let g=ctx.createLinearGradient(0,-BIG,0,water.y);
+  g.addColorStop(0,sky[0]); g.addColorStop(0.985,sky[1]); g.addColorStop(1,sky[2]);
+  ctx.fillStyle=g; ctx.fillRect(-BIG,-BIG,2*BIG+W,BIG+water.y);
+  g=ctx.createLinearGradient(0,0,0,water.y);
   g.addColorStop(0,sky[0]); g.addColorStop(0.6,sky[1]); g.addColorStop(1,sky[2]);
-  ctx.fillStyle=g; ctx.fillRect(0,0,W,water.y);
+  ctx.fillStyle=g; ctx.fillRect(-BIG,0,2*BIG+W,water.y);
   // Stars at night
-  if(t>1.02){ ctx.fillStyle='rgba(255,255,255,'+clamp((t-1.02)*4,0,0.9)+')'; for(let i=0;i<40;i++){ const sx=(i*97)%W, sy=(i*53)%(water.y-30); ctx.fillRect(sx,sy,1.5,1.5); } }
-  // Sun / moon
+  if(t>1.02){ ctx.fillStyle='rgba(255,255,255,'+clamp((t-1.02)*4,0,0.9)+')'; for(let i=0;i<70;i++){ const sx=((i*97)%(W+200))-100+par*0.1, sy=((i*53)%(water.y+120))-120; ctx.fillRect(sx,sy,1.5,1.5); } }
+  // Sun / moon (far away: barely moves with the camera)
   const arc=clamp(t,0,1);
-  const sx=60+arc*(W-120), sy=water.y-20-Math.sin(arc*Math.PI)*95;
-  if(t<=1.0){ ctx.fillStyle=t>0.85?'#ffb04a':'#fff2a8'; ctx.beginPath(); ctx.arc(sx,sy,14,0,Math.PI*2); ctx.fill(); }
-  else { const mt=clamp((t-1)/0.34,0,1); const mx=80+mt*(W-160), my=water.y-30-Math.sin(mt*Math.PI)*80; ctx.fillStyle='#f4f1d8'; ctx.beginPath(); ctx.arc(mx,my,11,0,Math.PI*2); ctx.fill(); ctx.fillStyle=sky[0]; ctx.beginPath(); ctx.arc(mx+5,my-3,9,0,Math.PI*2); ctx.fill(); }
-  // Clouds
+  const sx=60+arc*(W-120)+par*0.85, sy=water.y-20-Math.sin(arc*Math.PI)*95;
+  let sunX=sx, sunY=sy, sunOn=t<=1.0;
+  if(sunOn){ const glow=ctx.createRadialGradient(sx,sy,6,sx,sy,60); glow.addColorStop(0,'rgba(255,240,180,.45)'); glow.addColorStop(1,'rgba(255,240,180,0)'); ctx.fillStyle=glow; ctx.fillRect(sx-60,sy-60,120,120);
+    ctx.fillStyle=t>0.85?'#ffb04a':'#fff2a8'; ctx.beginPath(); ctx.arc(sx,sy,14,0,Math.PI*2); ctx.fill(); }
+  else { const mt=clamp((t-1)/0.34,0,1); const mx=80+mt*(W-160)+par*0.85, my=water.y-30-Math.sin(mt*Math.PI)*80; sunX=mx; sunY=my;
+    ctx.fillStyle='#f4f1d8'; ctx.beginPath(); ctx.arc(mx,my,11,0,Math.PI*2); ctx.fill(); ctx.fillStyle=sky[0]; ctx.beginPath(); ctx.arc(mx+5,my-3,9,0,Math.PI*2); ctx.fill(); }
+  // Clouds (far layer)
   const cloudy=day&&day.weather!=='sun';
   ctx.fillStyle=cloudy?'rgba(220,226,235,.9)':'rgba(255,255,255,.85)';
-  const nc=cloudy?6:3;
+  const nc=cloudy?7:4;
   for(let i=0;i<nc;i++){
-    const cx=((i*173+time*6*(1+i*0.1))%(W+160))-80, cy=22+(i*37)%50;
+    const cx=((i*173+time*6*(1+i*0.1))%(W+260))-130+par*0.7, cy=18+(i*37)%56;
     ctx.beginPath(); ctx.ellipse(cx,cy,34,10,0,0,Math.PI*2); ctx.ellipse(cx+18,cy-6,22,11,0,0,Math.PI*2); ctx.ellipse(cx-16,cy-3,20,9,0,0,Math.PI*2); ctx.fill();
   }
-  // Far shore
-  drawShore(lake,sky);
+  // Far shore (mid layer) and its reflection
+  ctx.save(); ctx.translate(par*0.45,0); drawShore(lake,sky); ctx.restore();
+  ctx.save();
+  ctx.beginPath(); ctx.rect(-BIG,water.y,2*BIG+W,46); ctx.clip();
+  for(let b=0;b<4;b++){
+    const wob=Math.sin(time*1.6+b*1.7)*1.6;
+    ctx.save(); ctx.beginPath(); ctx.rect(-BIG,water.y+b*12,2*BIG+W,12); ctx.clip();
+    ctx.globalAlpha=0.28-b*0.05; ctx.translate(par*0.45+wob,water.y*1.55); ctx.scale(1,-0.55); drawShore(lake,sky); ctx.restore();
+  }
+  ctx.restore();
   // Water
-  g=ctx.createLinearGradient(0,water.y,0,H);
+  g=ctx.createLinearGradient(0,water.y,0,H+BIG);
   const dim=t>1?0.55:1;
-  g.addColorStop(0,rgbMix(lake.water[0],'#000',1-dim)); g.addColorStop(0.5,rgbMix(lake.water[1],'#000',1-dim)); g.addColorStop(1,rgbMix(lake.water[2],'#000',1-dim));
-  ctx.fillStyle=g; ctx.fillRect(0,water.y,W,H-water.y);
+  g.addColorStop(0,rgbMix(lake.water[0],'#000',1-dim)); g.addColorStop((H-water.y)*0.5/(H-water.y+BIG),rgbMix(lake.water[1],'#000',1-dim)); g.addColorStop((H-water.y)/(H-water.y+BIG),rgbMix(lake.water[2],'#000',1-dim)); g.addColorStop(1,'#02050f');
+  ctx.fillStyle=g; ctx.fillRect(-BIG,water.y,2*BIG+W,H-water.y+BIG);
+  // Sun path on the water
+  if(sunOn||t>1.1){ const sp=ctx.createLinearGradient(0,water.y,0,water.y+70); sp.addColorStop(0,'rgba(255,245,200,'+(sunOn?0.32:0.18)+')'); sp.addColorStop(1,'rgba(255,245,200,0)');
+    for(let i=0;i<14;i++){ const yy=water.y+2+i*5, ww=8+i*3.5+Math.sin(time*2.3+i*1.7)*7, ox=Math.sin(time*1.7+i*2.1)*4; ctx.globalAlpha=0.9-i*0.055; ctx.fillStyle=sp; ctx.fillRect(sunX-ww/2+ox,yy,ww,1.8); } ctx.globalAlpha=1; }
   // Band hints: faint lines where the depth changes
   ctx.strokeStyle='rgba(255,255,255,.06)'; ctx.lineWidth=1;
   ctx.beginPath(); ctx.moveTo(dockX,180); ctx.lineTo(W,180); ctx.moveTo(dockX,230); ctx.lineTo(W,230); ctx.stroke();
-  // Weeds and bottom
+  // Bottom, weeds and (at the Weeds) lily pads
+  const weedy=S.spot==='weeds'?2.2:S.spot==='drop'?0.5:1;
   ctx.fillStyle='rgba(20,60,40,.7)';
-  for(let i=0;i<9;i++){ const wx=dockX+10+i*16, wh=18+(i*7)%14, sway=Math.sin(time*1.2+i)*3; ctx.beginPath(); ctx.moveTo(wx,H); ctx.quadraticCurveTo(wx+sway,H-wh/2,wx+sway*1.5,H-wh); ctx.lineTo(wx+4,H); ctx.fill(); }
-  ctx.fillStyle='rgba(0,0,0,.35)'; ctx.fillRect(0,H-6,W,6);
+  const nw=Math.round(9*weedy);
+  for(let i=0;i<nw;i++){ const wx=dockX+10+i*(16/weedy)+(S.spot==='weeds'?80:0), wh=18+(i*7)%14+(S.spot==='weeds'?8:0), sway=Math.sin(time*1.2+i)*3; ctx.beginPath(); ctx.moveTo(wx,H); ctx.quadraticCurveTo(wx+sway,H-wh/2,wx+sway*1.5,H-wh); ctx.lineTo(wx+4,H); ctx.fill(); }
+  if(S.spot==='drop'){ ctx.fillStyle='rgba(0,0,0,.3)'; ctx.beginPath(); ctx.moveTo(dockX+60,H); ctx.lineTo(dockX+120,H-14); ctx.lineTo(dockX+200,H-30); ctx.lineTo(W+BIG,H-30); ctx.lineTo(W+BIG,H); ctx.fill(); }
+  ctx.fillStyle='rgba(0,0,0,.35)'; ctx.fillRect(-BIG,H-6,2*BIG+W,6);
+  if(S.spot==='weeds'){ ctx.fillStyle='rgba(60,140,70,.85)'; for(let i=0;i<7;i++){ const px=dockX+150+i*34+Math.sin(time*0.7+i)*2, py=water.y+1; ctx.beginPath(); ctx.ellipse(px,py,9,3.2,0,0.2,Math.PI*2-0.2); ctx.fill(); } }
   // Rain
-  if(day&&day.weather==='rain'){ ctx.strokeStyle='rgba(220,235,255,.45)'; ctx.lineWidth=1; ctx.beginPath(); for(let i=0;i<60;i++){ const rx=((i*83+time*260)%(W+40))-20, ry=((i*131+time*420)%(water.y+10)); ctx.moveTo(rx,ry); ctx.lineTo(rx-2,ry+9); } ctx.stroke(); }
+  if(day&&day.weather==='rain'){ ctx.strokeStyle='rgba(220,235,255,.45)'; ctx.lineWidth=1; ctx.beginPath(); for(let i=0;i<90;i++){ const rx=((i*83+time*260)%(W+300))-150+par*0.9, ry=((i*131+time*420)%(water.y+140))-130; ctx.moveTo(rx,ry); ctx.lineTo(rx-2,ry+9); } ctx.stroke(); }
   // Surface sparkle
   ctx.strokeStyle='rgba(255,255,255,.35)'; ctx.lineWidth=2;
-  for(let i=0;i<12;i++){ const wx=dockX+((i*41+time*18)%(W-dockX)), ww=8+(i%3)*4; ctx.beginPath(); ctx.moveTo(wx,water.y+2+(i%2)*3); ctx.lineTo(wx+ww,water.y+2+(i%2)*3); ctx.stroke(); }
+  for(let i=0;i<16;i++){ const wx=dockX-60+((i*41+time*18)%(W-dockX+120)), ww=8+(i%3)*4; ctx.beginPath(); ctx.moveTo(wx,water.y+2+(i%2)*3); ctx.lineTo(wx+ww,water.y+2+(i%2)*3); ctx.stroke(); }
+  // Ambient life
+  drawAmbient(t);
   // Shadows (fish under water), the hooked one included so he sees it thrash
   for(const s of shadows) drawShadow(s);
   // Dock / boat and Bodie
@@ -843,81 +943,149 @@ function drawScene(){
   // Particles
   for(const p of particles){ ctx.fillStyle=p.c; ctx.globalAlpha=clamp(p.life/p.max,0,1); ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill(); }
   ctx.globalAlpha=1;
+  // Foreground reeds (near layer: moves more than the camera)
+  ctx.save(); ctx.translate(-par*0.35,0);
+  ctx.fillStyle='rgba(8,30,20,.85)';
+  for(let i=0;i<6;i++){ const rx=-46+i*11+(i%2)*4, rh=40+(i*17)%26, sway=Math.sin(time*1.1+i*0.8)*3; ctx.beginPath(); ctx.moveTo(rx,H+BIG); ctx.lineTo(rx,water.y+6); ctx.quadraticCurveTo(rx+sway,water.y-rh*0.6,rx+sway*1.4,water.y-rh); ctx.lineTo(rx+3,water.y-rh+6); ctx.quadraticCurveTo(rx+3+sway*0.5,water.y-rh*0.4,rx+4,water.y+6); ctx.lineTo(rx+4,H+BIG); ctx.fill();
+    if(i%3===0){ ctx.fillStyle='rgba(70,45,20,.95)'; ctx.fillRect(rx+sway*1.4-1,water.y-rh-2,5,11); ctx.fillStyle='rgba(8,30,20,.85)'; } }
+  ctx.restore();
   // Night: dim overlay with a headlamp beam
-  if(t>1){ ctx.fillStyle='rgba(5,8,30,'+clamp((t-1)*1.6,0,0.42)+')'; ctx.fillRect(0,0,W,H);
-    const bg=ctx.createRadialGradient(dockX-8,84,4,dockX-8,84,180); bg.addColorStop(0,'rgba(255,240,180,.35)'); bg.addColorStop(1,'rgba(255,240,180,0)'); ctx.fillStyle=bg; ctx.fillRect(0,0,W,H); }
+  if(t>1){ ctx.fillStyle='rgba(5,8,30,'+clamp((t-1)*1.6,0,0.42)+')'; ctx.fillRect(-BIG,-BIG,2*BIG+W,2*BIG+H);
+    const hx=baseX()-8; const bg=ctx.createRadialGradient(hx,84,4,hx,84,180); bg.addColorStop(0,'rgba(255,240,180,.35)'); bg.addColorStop(1,'rgba(255,240,180,0)'); ctx.fillStyle=bg; ctx.fillRect(-BIG,-BIG,2*BIG+W,2*BIG+H); }
+}
+// Small things that make the lake feel alive: a far fish jumping now and then, dragonflies over
+// the weeds by day, fireflies by the shore at night, a loon out on the big water.
+const ambient={jumpAt:6,jump:null,flies:[]};
+function drawAmbient(t){
+  // A fish jumps out past the bobber every so often
+  if(!ambient.jump&&time>ambient.jumpAt){ ambient.jump={x:rnd(W*0.55,W-20),t:0,sp:pick(lakeById(S.lake).fish)}; }
+  if(ambient.jump){
+    const J=ambient.jump; J.t+=dt; const k=J.t/1.1;
+    if(k>=1){ splashAt(J.x,5,false); ambient.jump=null; ambient.jumpAt=time+rnd(9,20); }
+    else { const y=water.y-Math.sin(k*Math.PI)*22; ctx.save(); ctx.globalAlpha=0.9; drawFish(ctx,J.sp,J.x,y,16,k<0.5?1:-1,{}); ctx.restore(); if(k<0.08&&Math.random()<0.5) splashAt(J.x,2,false); }
+  }
+  if(t<1.0&&(S.spot==='weeds'||S.lake==='dock')){
+    for(let i=0;i<2;i++){ const fx=dockX+140+i*120+Math.sin(time*0.9+i*2)*40, fy=water.y-14-Math.sin(time*2.7+i)*6;
+      ctx.strokeStyle='rgba(120,220,255,.8)'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(fx-4,fy); ctx.lineTo(fx+4,fy); ctx.stroke();
+      ctx.strokeStyle='rgba(255,255,255,.6)'; ctx.beginPath(); ctx.moveTo(fx-3,fy-2); ctx.lineTo(fx+3,fy-2); ctx.stroke(); }
+  }
+  if(t>1.05){ for(let i=0;i<8;i++){ const fx=-10+((i*53+time*4)%80), fy=water.y-20-(i*17)%40+Math.sin(time*1.5+i)*4; const a=0.4+0.6*Math.abs(Math.sin(time*2+i*1.3)); ctx.fillStyle='rgba(220,255,120,'+a+')'; ctx.fillRect(fx,fy,1.6,1.6); } }
+  if(lakeById(S.lake).shore==='bigwater'||lakeById(S.lake).shore==='islands'){ const lx=W*0.72+Math.sin(time*0.3)*30, ly=water.y-2; ctx.fillStyle='#111'; ctx.beginPath(); ctx.ellipse(lx,ly,7,2.5,0,0,Math.PI*2); ctx.fill(); ctx.fillRect(lx+4,ly-7,1.6,7); ctx.beginPath(); ctx.arc(lx+5,ly-7,2,0,Math.PI*2); ctx.fill(); }
 }
 function drawShore(lake,sky){
   const y=water.y;
   const far=rgbMix(sky[0],'#1a2a3a',0.55), near=rgbMix(sky[0],'#0f1f2a',0.7);
   if(lake.shore==='cottage'||lake.shore==='rocks'||lake.shore==='islands'){
-    ctx.fillStyle=far; ctx.beginPath(); ctx.moveTo(0,y); for(let x=0;x<=W;x+=20){ ctx.lineTo(x,y-18-Math.abs(Math.sin(x*0.021))*26); } ctx.lineTo(W,y); ctx.fill();
+    ctx.fillStyle=far; ctx.beginPath(); ctx.moveTo(-400,y); for(let x=-400;x<=W+400;x+=20){ ctx.lineTo(x,y-18-Math.abs(Math.sin(x*0.021))*26); } ctx.lineTo(W+400,y); ctx.fill();
     // trees
     ctx.fillStyle=near;
-    for(let x=dockX-40;x<W;x+=14){ const h=14+(x*7)%12; ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+5,y-h); ctx.lineTo(x+10,y); ctx.fill(); }
-    if(lake.shore==='islands'){ ctx.fillStyle=near; [[250,30],[360,22],[440,26]].forEach(([ix,iw])=>{ ctx.beginPath(); ctx.ellipse(ix,y,iw,8,0,Math.PI,0); ctx.fill(); for(let k=-1;k<=1;k++){ ctx.beginPath(); ctx.moveTo(ix+k*10-4,y-6); ctx.lineTo(ix+k*10,y-22); ctx.lineTo(ix+k*10+4,y-6); ctx.fill(); } }); }
-    if(lake.shore==='rocks'){ ctx.fillStyle='#8c7f78'; ctx.beginPath(); ctx.moveTo(W-120,y); ctx.lineTo(W-80,y-14); ctx.lineTo(W-20,y-10); ctx.lineTo(W,y-18); ctx.lineTo(W,y); ctx.fill(); }
-    if(lake.shore==='cottage'){ ctx.fillStyle='#8b4a2a'; ctx.fillRect(300,y-20,30,20); ctx.fillStyle='#c0392b'; ctx.beginPath(); ctx.moveTo(296,y-20); ctx.lineTo(315,y-32); ctx.lineTo(334,y-20); ctx.fill(); ctx.fillStyle='#ffe08a'; ctx.fillRect(310,y-14,8,7); }
+    for(let x=-400;x<W+400;x+=14){ const h=14+Math.abs(x*7)%12; ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+5,y-h); ctx.lineTo(x+10,y); ctx.fill(); }
+    if(lake.shore==='islands'){ ctx.fillStyle=near; [[250,30],[360,22],[440,26],[W+60,34],[W+180,24]].forEach(([ix,iw])=>{ ctx.beginPath(); ctx.ellipse(ix,y,iw,8,0,Math.PI,0); ctx.fill(); for(let k=-1;k<=1;k++){ ctx.beginPath(); ctx.moveTo(ix+k*10-4,y-6); ctx.lineTo(ix+k*10,y-22); ctx.lineTo(ix+k*10+4,y-6); ctx.fill(); } }); }
+    if(lake.shore==='rocks'){ ctx.fillStyle='#8c7f78'; ctx.beginPath(); ctx.moveTo(W-120,y); ctx.lineTo(W-80,y-14); ctx.lineTo(W-20,y-10); ctx.lineTo(W+40,y-18); ctx.lineTo(W+400,y-12); ctx.lineTo(W+400,y); ctx.fill(); }
+    if(lake.shore==='cottage'){ ctx.fillStyle='#8b4a2a'; ctx.fillRect(300,y-20,30,20); ctx.fillStyle='#c0392b'; ctx.beginPath(); ctx.moveTo(296,y-20); ctx.lineTo(315,y-32); ctx.lineTo(334,y-20); ctx.fill(); ctx.fillStyle='#ffe08a'; ctx.fillRect(310,y-14,8,7);
+      // chimney smoke
+      ctx.fillStyle='rgba(255,255,255,.35)'; for(let i=0;i<4;i++){ const k=(time*0.4+i*0.25)%1; ctx.beginPath(); ctx.arc(326+Math.sin(k*6)*3,y-34-k*26,2+k*4,0,Math.PI*2); ctx.fill(); } }
   } else if(lake.shore==='river'){
-    ctx.fillStyle=far; ctx.fillRect(0,y-22,W,22);
-    ctx.fillStyle=near; for(let x=dockX-30;x<W;x+=22){ ctx.beginPath(); ctx.arc(x,y-24,9,0,Math.PI*2); ctx.fill(); ctx.fillRect(x-1,y-20,2,20); }
+    ctx.fillStyle=far; ctx.fillRect(-400,y-22,W+800,22);
+    ctx.fillStyle=near; for(let x=-400;x<W+400;x+=22){ ctx.beginPath(); ctx.arc(x,y-24,9,0,Math.PI*2); ctx.fill(); ctx.fillRect(x-1,y-20,2,20); }
     // bridge
-    ctx.strokeStyle='#2a2a3a'; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(300,y-8); ctx.lineTo(W,y-8); ctx.stroke();
-    for(let x=310;x<W;x+=28){ ctx.beginPath(); ctx.arc(x+14,y-8,14,Math.PI,0); ctx.stroke(); }
+    ctx.strokeStyle='#2a2a3a'; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(300,y-8); ctx.lineTo(W+400,y-8); ctx.stroke();
+    for(let x=310;x<W+400;x+=28){ ctx.beginPath(); ctx.arc(x+14,y-8,14,Math.PI,0); ctx.stroke(); }
     // bank
-    ctx.fillStyle='#6b5330'; ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(0,y-10); ctx.lineTo(dockX+40,y-4); ctx.lineTo(dockX+60,y); ctx.fill();
+    ctx.fillStyle='#6b5330'; ctx.beginPath(); ctx.moveTo(-400,y); ctx.lineTo(-400,y-10); ctx.lineTo(dockX+40,y-4); ctx.lineTo(dockX+60,y); ctx.fill();
   } else if(lake.shore==='bigwater'){
-    ctx.fillStyle=far; ctx.fillRect(0,y-6,W,6);
+    ctx.fillStyle=far; ctx.fillRect(-400,y-6,W+800,6);
     // lighthouse
     ctx.fillStyle='#e8e4dc'; ctx.fillRect(400,y-40,10,40); ctx.fillStyle='#c0392b'; ctx.fillRect(400,y-30,10,8); ctx.fillRect(400,y-16,10,8); ctx.fillStyle='#ffe08a'; ctx.fillRect(399,y-46,12,6);
+    // its beam, sweeping
+    const a=time*0.8; ctx.fillStyle='rgba(255,240,180,'+(0.08+0.06*Math.sin(a*2))+')'; ctx.beginPath(); ctx.moveTo(405,y-43); ctx.lineTo(405+Math.cos(a)*160,y-43+Math.sin(a)*40-20); ctx.lineTo(405+Math.cos(a+0.25)*160,y-43+Math.sin(a+0.25)*40-20); ctx.fill();
     // gulls
     ctx.strokeStyle='rgba(255,255,255,.8)'; ctx.lineWidth=1.5; for(let i=0;i<3;i++){ const gx=150+i*90+Math.sin(time+i)*20, gy=40+i*18; ctx.beginPath(); ctx.moveTo(gx-6,gy); ctx.quadraticCurveTo(gx-3,gy-4,gx,gy); ctx.quadraticCurveTo(gx+3,gy-4,gx+6,gy); ctx.stroke(); }
   }
 }
 function drawPlatform(lake){
   const y=water.y;
-  if(lake.shore==='islands'){
-    // Fishing from a boat
-    const bob=Math.sin(time*1.5)*2;
-    ctx.fillStyle='#b8b8c0'; ctx.beginPath(); ctx.moveTo(20,y-2+bob); ctx.lineTo(dockX+22,y-2+bob); ctx.lineTo(dockX+10,y+12+bob); ctx.lineTo(30,y+12+bob); ctx.fill();
-    ctx.fillStyle='#4a4a5a'; ctx.fillRect(24,y-8+bob,dockX-10,7);
-    ctx.fillStyle='#2a2a33'; ctx.fillRect(30,y+10+bob,dockX-25,3);
-    rodTip={x:dockX+8,y:y-44+bob};
-    return;
+  const spot=spotById(S.spot);
+  const inBoat=spot.id!=='shore'||lake.shore==='islands';
+  // The dock is always there on the shore
+  if(lake.shore!=='islands'){
+    ctx.fillStyle='#8a5a30'; ctx.fillRect(-60,y-10,dockX+60,8);
+    ctx.fillStyle='#6a4220'; ctx.fillRect(-60,y-2,dockX+60,3);
+    ctx.fillStyle='#4e3016'; for(const px of [12,46,84]){ ctx.fillRect(px,y-2,6,34); }
+    ctx.fillStyle='#8a5a30'; for(let x=-60;x<dockX;x+=12){ ctx.fillRect(x,y-10,1,8); }
+    // A bait bucket and a tackle box on the dock
+    ctx.fillStyle='#d8d8e0'; ctx.fillRect(30,y-20,10,10); ctx.fillStyle='#8aa'; ctx.fillRect(31,y-19,8,2);
+    ctx.fillStyle='#c0392b'; ctx.fillRect(46,y-16,14,6); ctx.fillStyle='#222'; ctx.fillRect(52,y-14,2,2);
   }
-  // Dock
-  ctx.fillStyle='#8a5a30'; ctx.fillRect(0,y-10,dockX,8);
-  ctx.fillStyle='#6a4220'; ctx.fillRect(0,y-2,dockX,3);
-  ctx.fillStyle='#4e3016'; for(const px of [12,46,84]){ ctx.fillRect(px,y-2,6,34); }
-  ctx.fillStyle='#8a5a30'; for(let x=0;x<dockX;x+=12){ ctx.fillRect(x,y-10,1,8); }
-  rodTip={x:dockX+6,y:y-56};
+  if(!inBoat){ rodTip={x:dockX+6,y:y-56}; return; }
+  // Boat at the spot (or always, on Lake of the Woods)
+  const bx=baseX();
+  const bob=Math.sin(time*1.5)*2;
+  const kind=spot.id==='weeds'?'canoe':spot.id==='drop'?'tin':(S.boats.includes('tin')?'tin':S.boats.includes('canoe')?'canoe':'tin');
+  if(kind==='canoe'){
+    ctx.fillStyle='#b8402a'; ctx.beginPath(); ctx.moveTo(bx-62,y-4+bob); ctx.quadraticCurveTo(bx-30,y+12+bob,bx+4,y+10+bob); ctx.quadraticCurveTo(bx+22,y+6+bob,bx+30,y-6+bob); ctx.lineTo(bx+20,y-2+bob); ctx.lineTo(bx-52,y-1+bob); ctx.closePath(); ctx.fill();
+    ctx.fillStyle='#e8c27a'; ctx.fillRect(bx-40,y-3+bob,20,3); ctx.fillRect(bx-10,y-3+bob,18,3);
+    ctx.strokeStyle='#e8c27a'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(bx-50,y-10+bob); ctx.lineTo(bx-58,y+16+bob); ctx.stroke();
+  } else {
+    ctx.fillStyle='#b8b8c0'; ctx.beginPath(); ctx.moveTo(bx-70,y-3+bob); ctx.lineTo(bx+24,y-3+bob); ctx.lineTo(bx+14,y+12+bob); ctx.lineTo(bx-60,y+12+bob); ctx.closePath(); ctx.fill();
+    ctx.fillStyle='#1b4fa0'; ctx.fillRect(bx-70,y-1+bob,94,3);
+    ctx.fillStyle='#4a4a5a'; ctx.fillRect(bx-64,y-9+bob,26,7); ctx.fillRect(bx-22,y-9+bob,26,7);
+    ctx.fillStyle='#2a2a33'; ctx.fillRect(bx-74,y-12+bob,8,22); ctx.fillStyle='#555'; ctx.fillRect(bx-72,y-20+bob,4,9);
+  }
+  // Water line around the hull
+  ctx.strokeStyle='rgba(255,255,255,.45)'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(bx-74,y+4+bob*0.3); ctx.lineTo(bx+30,y+4+bob*0.3); ctx.stroke();
+  rodTip={x:bx+10,y:y-50+bob};
 }
+// Bodie, with a pose for every moment: resting, winding up, casting, waiting, hooking, fighting,
+// cheering. Drawn in 2 px pixels so he reads as a sprite.
 function drawBodie(){
-  const y=water.y-10; const x=dockX-30; const boat=lakeById(S.lake).shore==='islands'; const bob=boat?Math.sin(time*1.5)*2:0;
-  const yy=y+bob-(boat?0:0);
-  const fighting=state==='fight';
-  const lean=fighting?Math.sin(time*18)*1.2:0;
-  // Legs
-  ctx.fillStyle='#2e3a66'; ctx.fillRect(x-7,yy-18,6,18); ctx.fillRect(x+1,yy-18,6,18);
-  // Boots
-  ctx.fillStyle='#222'; ctx.fillRect(x-8,yy-3,8,3); ctx.fillRect(x+1,yy-3,8,3);
-  // Jacket (Jets blue) with white stripe
-  ctx.fillStyle='#1b4fa0'; ctx.fillRect(x-9+lean,yy-38,18,20);
-  ctx.fillStyle='#fff'; ctx.fillRect(x-9+lean,yy-30,18,3);
-  // Head
-  ctx.fillStyle='#f1c7a0'; ctx.fillRect(x-6+lean,yy-50,12,12);
-  ctx.fillStyle='#2b1a0e'; ctx.fillRect(x-7+lean,yy-52,14,5);
-  // Toque with pom
-  ctx.fillStyle='#c0392b'; ctx.fillRect(x-7+lean,yy-56,14,6); ctx.fillStyle='#fff'; ctx.fillRect(x-2+lean,yy-59,4,4);
-  // Eye and smile
-  ctx.fillStyle='#222'; ctx.fillRect(x+2+lean,yy-46,2,2);
-  ctx.fillRect(x+1+lean,yy-41,4,1);
-  // Arms + rod
-  ctx.strokeStyle='#1b4fa0'; ctx.lineWidth=4; ctx.beginPath(); ctx.moveTo(x+4+lean,yy-32); ctx.lineTo(x+14+lean,yy-28); ctx.stroke();
+  const lake=lakeById(S.lake); const spot=spotById(S.spot);
+  const inBoat=spot.id!=='shore'||lake.shore==='islands';
+  const bob=inBoat?Math.sin(time*1.5)*2:0;
+  const bx=baseX();
+  const gy=inBoat?water.y-4+bob:water.y-10;       // ground under his boots
+  const x=bx-26;
+  let pose='idle';
+  if(state==='charge') pose='charge'; else if(state==='cast') pose='cast'; else if(state==='wait') pose='wait';
+  else if(state==='bite'||state==='choose') pose='bite'; else if(state==='fight') pose='fight'; else if(state==='land'||state==='card') pose='cheer';
+  const hop=pose==='bite'?-Math.abs(Math.sin(time*14))*4:pose==='cheer'?-Math.abs(Math.sin(time*9))*5:0;
+  const lean=pose==='fight'?-4+Math.sin(time*18)*1.2:pose==='charge'?-3:pose==='cast'?3:0;
+  const crouch=pose==='fight'?3:0;
+  const P=(px,py,w,h,col)=>{ ctx.fillStyle=col; ctx.fillRect(x+px,gy+py+hop,w,h); };
+  const skin='#f1c7a0', jacket='#1b4fa0', pants='#2e3a66', toque='#c0392b', hair='#2b1a0e';
+  // Legs and boots
+  if(pose==='fight'){ P(-10,-16,6,16,pants); P(4,-16,6,16,pants); P(-12,-3,9,3,'#222'); P(3,-3,9,3,'#222'); }
+  else { P(-7,-18,6,18,pants); P(1,-18,6,18,pants); P(-8,-3,8,3,'#222'); P(1,-3,8,3,'#222'); }
+  // Jacket with a white stripe, leaning
+  P(-9+lean,-38+crouch,18,20-crouch,jacket); P(-9+lean,-30+crouch,18,3,'#fff');
+  // Head, hair, toque with pom
+  P(-6+lean,-50+crouch,12,12,skin); P(-7+lean,-52+crouch,14,5,hair); P(-7+lean,-56+crouch,14,6,toque); P(-2+lean,-59+crouch,4,4,'#fff');
+  // Face: eye, and a mouth that changes
+  P(2+lean,-46+crouch,2,2,'#222');
+  if(pose==='cheer'||pose==='bite'){ P(0+lean,-42+crouch,5,2,'#222'); P(1+lean,-41+crouch,3,1,'#f55'); }
+  else if(pose==='fight'){ P(0+lean,-41+crouch,5,1,'#222'); }
+  else { P(1+lean,-41+crouch,4,1,'#222'); }
+  // Arms and rod
+  ctx.strokeStyle=jacket; ctx.lineWidth=4; ctx.lineCap='round';
+  const sx=x+4+lean, sy=gy-32+crouch+hop;     // shoulder
+  let hx,hy;                                  // hand on the rod grip
+  if(pose==='cheer'){ ctx.beginPath(); ctx.moveTo(sx,sy); ctx.lineTo(sx-8,sy-12); ctx.moveTo(sx+4,sy); ctx.lineTo(sx+12,sy-13); ctx.stroke(); hx=sx+12; hy=sy-13; }
+  else if(pose==='charge'){ hx=sx-4; hy=sy-10; ctx.beginPath(); ctx.moveTo(sx,sy); ctx.lineTo(hx,hy); ctx.stroke(); }
+  else if(pose==='cast'){ hx=sx+14; hy=sy-4; ctx.beginPath(); ctx.moveTo(sx,sy); ctx.lineTo(hx,hy); ctx.stroke(); }
+  else if(pose==='fight'){ hx=sx+9; hy=sy-2; ctx.beginPath(); ctx.moveTo(sx,sy); ctx.lineTo(hx,hy); ctx.moveTo(sx+2,sy+3); ctx.lineTo(hx+2,hy+4); ctx.stroke(); }
+  else { hx=sx+10; hy=sy+4; ctx.beginPath(); ctx.moveTo(sx,sy); ctx.lineTo(hx,hy); ctx.stroke(); }
+  ctx.lineCap='butt';
+  // Rod: bends under load, swings back on the wind-up
   ctx.strokeStyle='#d8c27a'; ctx.lineWidth=2.5;
-  const bend=fighting?clamp(fight.tension,0,1)*22:(state==='charge'?power*10:0);
-  const tx=rodTip.x, ty=rodTip.y+bend;
-  ctx.beginPath(); ctx.moveTo(x+14+lean,yy-28); ctx.quadraticCurveTo(x+40,yy-60+bend*0.6,tx,ty); ctx.stroke();
+  const bend=pose==='fight'?clamp(fight.tension,0,1)*22:(pose==='charge'?power*8:0);
+  let tx=rodTip.x, ty=rodTip.y+bend;
+  if(pose==='charge'){ tx=hx-26-power*10; ty=hy-50+power*6; }
+  if(pose==='cheer'){ tx=hx+10; ty=hy-50; }
+  const cx=pose==='charge'?hx-8:(hx+tx)/2+8, cy=pose==='charge'?hy-30:Math.min(hy,ty)-26+bend*0.6;
+  ctx.beginPath(); ctx.moveTo(hx,hy); ctx.quadraticCurveTo(cx,cy,tx,ty); ctx.stroke();
+  // Reel
+  ctx.fillStyle='#444'; ctx.beginPath(); ctx.arc(hx+2,hy+4,3,0,Math.PI*2); ctx.fill();
+  if(pose==='fight'&&pressed){ ctx.strokeStyle='#ddd'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(hx+2,hy+4); ctx.lineTo(hx+2+Math.cos(time*20)*4,hy+4+Math.sin(time*20)*4); ctx.stroke(); }
   rodTip={x:tx,y:ty};
 }
 function drawLine(){
@@ -929,8 +1097,8 @@ function drawLine(){
       const hgt=40*power; const col=power>0.85?'#ff4a3d':power>0.5?'#ffd23f':'#58e070';
       ctx.fillStyle=col; ctx.fillRect(px+2,py-hgt,6,hgt);
       // Where it would land
-      const reach=rodById(S.rod).reach;
-      const lx=dockX+30+power*reach*(W-dockX-50);
+      const reach=rodById(S.rod).reach, bx=baseX();
+      const lx=bx+30+power*reach*(W-bx-50);
       ctx.strokeStyle='rgba(255,255,255,.6)'; ctx.setLineDash([3,4]); ctx.beginPath(); ctx.moveTo(rodTip.x,rodTip.y); ctx.quadraticCurveTo((rodTip.x+lx)/2,rodTip.y-70*power-20,lx,water.y); ctx.stroke(); ctx.setLineDash([]);
       ctx.fillStyle='rgba(255,255,255,.7)'; ctx.beginPath(); ctx.arc(lx,water.y,3,0,Math.PI*2); ctx.fill();
     }
@@ -1076,7 +1244,7 @@ function paintFishOn(cv,sp,len,opts){
 // ---------- FX ----------
 function pop(x,y,text,cls){
   const el=document.createElement('span'); el.className='pop'+(cls?' '+cls:''); el.textContent=text;
-  el.style.left=(x/W*100)+'%'; el.style.top=(y/H*100)+'%';
+  const p=worldToScreen(x,y); el.style.left=p.x+'px'; el.style.top=p.y+'px';
   fxEl.appendChild(el); setTimeout(()=>el.remove(),1100);
 }
 function splashAt(x,n,big){
@@ -1090,22 +1258,24 @@ function confetti(n){
 }
 function updateParticles(){
   for(const p of particles){ p.vy+=(p.slow?60:380)*dt; p.x+=p.vx*dt+(p.slow?Math.sin(time*6+p.r)*20*dt:0); p.y+=p.vy*dt; p.life-=dt; }
-  particles=particles.filter(p=>p.life>0&&p.y<H);
+  particles=particles.filter(p=>p.life>0&&p.y<H+40);
 }
 function setStatus(t){ statusEl.textContent=t; }
-function setAct(big,small){ actBig.textContent=big; actSm.textContent=small||''; }
+function setAct(big,small){ actBig.textContent=big; actSm.textContent=small||''; actBtn.classList.toggle('pulse',big==='HOOK!'); }
 
 // ---------- HUD ----------
 function updateHud(){
   coinsEl.textContent=S.coins;
   lakeLbl.textContent=lakeById(S.lake).lbl;
-  timeLbl.textContent=day?timeText():'';
+  const spot=spotById(S.spot);
+  timeLbl.textContent=(day?timeText():'')+(spot.lbl?(day?' · ':'')+spot.lbl:'');
   dayFishEl.textContent=(day?day.fish:0)+' FISH';
   const newBadges=S.badges.length-(S.seen.badges||0);
   $('badgesBtn').classList.toggle('alert',newBadges>0);
   const canUnlock=LAKES.some(l=>!S.unlocked.includes(l.id)&&unlockOk(l).ok);
-  $('lakesBtn').classList.toggle('alert',canUnlock);
-  const canBuy=[...RODS,...REELS,...LURES,...EXTRAS].some(g=>!owns(g)&&g.price>0&&g.price<=S.coins);
+  const newSpot=SPOTS.some(sp=>sp.needs&&S.boats.includes(sp.needs)&&!(S.flags['spot_'+sp.id]));
+  $('lakesBtn').classList.toggle('alert',canUnlock||newSpot);
+  const canBuy=[...RODS,...REELS,...LURES,...BOATS,...EXTRAS].some(g=>!owns(g)&&g.price>0&&g.price<=S.coins);
   $('shopBtn').classList.toggle('alert',canBuy&&S.coins>=40);
   $('journalBtn').classList.toggle('alert',Object.keys(S.best).length>(S.seen.journal||0));
 }
@@ -1113,6 +1283,7 @@ function owns(g){
   if(RODS.includes(g)) return RODS.indexOf(g)<=RODS.indexOf(rodById(S.rod));
   if(REELS.includes(g)) return REELS.indexOf(g)<=REELS.indexOf(reelById(S.reel));
   if(LURES.includes(g)) return S.lures.includes(g.id);
+  if(BOATS.includes(g)) return S.boats.includes(g.id);
   return S.extras.includes(g.id);
 }
 
@@ -1125,7 +1296,8 @@ function doCast(){
   const rod=rodById(S.rod), L=lureById(S.lure);
   const p=clamp(power,0.12,1);
   state='cast'; castCount++;
-  const lx=dockX+30+p*rod.reach*(W-dockX-50);
+  const bx=baseX();
+  const lx=bx+30+p*rod.reach*(W-bx-50);
   lure.x=rodTip.x; lure.y=rodTip.y; lure.target=lx; lure.depth=L.depth; lure.sunk=false;
   const T=0.55+p*0.35; lure.vx=(lx-lure.x)/T; lure.vy=-(140+p*120);
   lure.t=0; lure.T=T;
@@ -1180,7 +1352,7 @@ function startBite(){
   state='bite'; biteT=0;
   const f=FISH[bitePending.sp];
   biteWindow=clamp(1.55-f.rarity*0.08-(bitePending.len/160)*0.3,1.0,1.5)+(S.extras.includes('net')?0.25:0);
-  bobber.dip=9; Audio.bite(); splashAt(bobber.x,6,false);
+  bobber.dip=9; Audio.bite(); splashAt(bobber.x,6,false); cam.shake=4;
   try{ if(navigator.vibrate) navigator.vibrate(40); }catch(e){}
   setStatus('BITE! Tap now!'); setAct('HOOK!','tap!');
   pop(bobber.x,water.y-16,'!','big');
@@ -1212,7 +1384,7 @@ function maybeEndDay(){ if(state==='idle'&&day&&day.cast>=dayLen()) endDay(); }
 function setHook(){
   const {sp,len,shadow}=bitePending;
   if(READING.enabled&&state!=='choose'){ openChoose(); return; }
-  Audio.hook(); bobber.dip=4;
+  Audio.hook(); bobber.dip=4; cam.shake=5;
   const f=FISH[sp];
   const rod=rodById(S.rod), reel=reelById(S.reel);
   const size=(len-f.min)/(f.max-f.min);           // 0..1 within species
@@ -1251,8 +1423,9 @@ function updateFight(){
   // Fish drag the bobber around
   const sh=F.shadow;
   const away=running?1:0.3;
-  bobber.x=clamp(bobber.x+(sh.dir*18*away-(pressed?34*(1-F.tension*0.5):0))*dt,dockX+12,W-8);
-  if(bobber.x<=dockX+12&&F.prog<0.98) F.prog=Math.max(F.prog,0.98);
+  bobber.x=clamp(bobber.x+(sh.dir*18*away-(pressed?34*(1-F.tension*0.5):0))*dt,baseX()+12,W-8);
+  if(bobber.x<=baseX()+12&&F.prog<0.98) F.prog=Math.max(F.prog,0.98);
+  if(running) cam.shake=Math.max(cam.shake,3);
   lure.x=bobber.x+sh.dir*8; lure.y=lerp(lure.y,BANDS[sh.d][0]+(1-F.prog)*30,dt*2);
   sh.x=lure.x+sh.dir*(FISH[sh.sp].shape==='pike'||FISH[sh.sp].shape==='muskie'?10:6); sh.y=lure.y+3;
   bobber.dip=4+Math.sin(time*14)*(running?4:2);
@@ -1268,7 +1441,7 @@ function updateFight(){
 }
 function endFight(){ $('meter').hidden=true; $('runTag').classList.remove('on'); }
 function lineSnap(){
-  endFight(); Audio.snap(); day.streak=0;
+  endFight(); Audio.snap(); day.streak=0; cam.shake=8;
   const sh=fight.shadow; sh.hooked=false; sh.chasing=false; sh.dir=-sh.dir; sh.speed=45; sh.life=4;
   pop(bobber.x,water.y-20,'SNAP!','bad');
   fight=null; bitePending=null;
@@ -1306,7 +1479,7 @@ function landFish(){
   const {sp,len,shadow}=fight;
   const lake=lakeById(S.lake), f=FISH[sp];
   state='land';
-  Audio.splash(); splashAt(bobber.x,18,true);
+  Audio.splash(); splashAt(bobber.x,18,true); cam.shake=6;
   shadows=shadows.filter(s=>s!==shadow);
   // Records
   const tags=[];
@@ -1320,6 +1493,10 @@ function landFish(){
   if(isMa){ tags.push(['MASTER ANGLER!','ma']); coins+=newMa?60:25; }
   if(sp===lake.legend&&len>=f.min+(f.max-f.min)*0.6) tags.push(['LAKE LEGEND!','']);
   if(fight.wordBonus){ tags.push(['WORD BONUS','']); coins+=5; }
+  const tier=tierOf(sp,len), hadTier=S.tier[sp]===undefined?-1:S.tier[sp];
+  if(tier>0&&tier>hadTier){ tags.push([TIERS[tier].ico+' '+TIERS[tier].name,'medal']); coins+=TIERS[tier].coins; }
+  S.tier[sp]=Math.max(hadTier,tier);
+  if(sp===fishOfDay()&&fotdFresh()){ S.fotd.done=true; S.fotdCount++; tags.push(['FISH OF THE DAY x3','fotd']); coins*=3; }
   S.best[sp]=Math.max(S.best[sp]||0,len);
   S.counts[sp]=(S.counts[sp]||0)+1;
   if(isMa) S.ma[sp]=Math.max(S.ma[sp]||0,len);
@@ -1334,7 +1511,7 @@ function landFish(){
   if(hourNow()<8) S.flags.dawn=true;
   emit('catch',{fish:sp,len,coins,first,pb,isMa});
   // Card
-  const big=first||pb||isMa||f.rarity>=4;
+  const big=first||pb||isMa||f.rarity>=4||tier>=2&&tier>hadTier||tags.some(t=>t[1]==='fotd');
   (big?Audio.bigJingle:Audio.catchJingle)();
   if(big) confetti(isMa||f.rarity>=4?40:22);
   $('catchTags').innerHTML=tags.map(([t,c])=>'<span class="'+c+'">'+t+'</span>').join('');
@@ -1387,7 +1564,7 @@ function endDay(){
   $('ddLine').textContent=pick(lines);
   $('ddFish').textContent=day.fish; $('ddBig').textContent=day.fish?Math.round(day.bigcm)+' cm':'none'; $('ddCoins').textContent=day.coins;
   const cv=$('ddArt'); if(day.fish){ cv.hidden=false; paintFishOn(cv,day.bigsp,day.bigcm); } else cv.hidden=true;
-  $('ddBadges').innerHTML=day.badges.map(id=>{ const b=BADGES.find(x=>x.id===id); return '<span class="chip ok">'+b.ico+' '+b.name+'</span>'; }).join('');
+  $('ddBadges').innerHTML=day.badges.map(id=>{ const b=BADGES.find(x=>x.id===id); return '<span class="chip-s ok">'+b.ico+' '+b.name+'</span>'; }).join('');
   $('daydone').hidden=false;
   setStatus(''); setAct('DAY DONE','');
   persist();
@@ -1506,15 +1683,15 @@ $('shopTabs').addEventListener('click',e=>{ const t=e.target.closest('.tab'); if
 function renderShop(){
   $('shopCoins').textContent=S.coins+' COINS';
   document.querySelectorAll('#shopTabs .tab').forEach(t=>t.setAttribute('aria-selected',String(t.dataset.tab===shopTab)));
-  const list={lure:LURES,rod:RODS,reel:REELS,extra:EXTRAS}[shopTab];
+  const list={lure:LURES,rod:RODS,reel:REELS,boat:BOATS,extra:EXTRAS}[shopTab];
   const g=$('shopGrid'); g.innerHTML='';
   list.forEach((it,idx)=>{
     const have=owns(it);
-    const inUse=(shopTab==='lure'&&S.lure===it.id)||(shopTab==='rod'&&S.rod===it.id)||(shopTab==='reel'&&S.reel===it.id)||(shopTab==='extra'&&have);
+    const inUse=(shopTab==='lure'&&S.lure===it.id)||(shopTab==='rod'&&S.rod===it.id)||(shopTab==='reel'&&S.reel===it.id)||((shopTab==='extra'||shopTab==='boat')&&have);
     const prev=(shopTab==='rod'||shopTab==='reel')?idx>0&&!owns(list[idx-1]):false;
     const el=document.createElement('div'); el.className='item'+(inUse?' on':'')+(prev?' locked':'');
     let action='';
-    if(shopTab==='extra') action=have?'<span class="pr have">OWNED</span>':'<button class="mini" type="button" data-buy '+(S.coins<it.price?'disabled':'')+'>BUY</button>';
+    if(shopTab==='extra'||shopTab==='boat') action=have?'<span class="pr have">OWNED</span>':'<button class="mini" type="button" data-buy '+(S.coins<it.price?'disabled':'')+'>BUY</button>';
     else if(have) action=inUse?'<span class="pr have">USING</span>':(shopTab==='lure'?'<button class="mini use" type="button" data-use>USE</button>':'<span class="pr have">OWNED</span>');
     else action='<button class="mini" type="button" data-buy '+(S.coins<it.price||prev?'disabled':'')+'>BUY</button>';
     el.innerHTML='<span class="ico" aria-hidden="true">'+it.ico+'</span><span class="nm">'+it.name+'</span><span class="sub">'+it.sub+'</span>'+
@@ -1530,6 +1707,7 @@ function buy(it){
   if(RODS.includes(it)) S.rod=it.id;
   else if(REELS.includes(it)) S.reel=it.id;
   else if(LURES.includes(it)){ if(!S.lures.includes(it.id)) S.lures.push(it.id); S.lure=it.id; }
+  else if(BOATS.includes(it)){ if(!S.boats.includes(it.id)) S.boats.push(it.id); }
   else if(!S.extras.includes(it.id)) S.extras.push(it.id);
   persist(); checkBadges(); renderShop(); updateHud();
   pop(W/2,H*0.5,'GOT IT!','good');
@@ -1557,6 +1735,9 @@ function renderJournal(){
       const sub=document.createElement('div'); sub.className='sub';
       sub.textContent=have?('x'+S.counts[sp]+' · best '+Math.round(S.best[sp])+' cm'):('Lives '+(f.depth.includes(2)?'deep':f.depth.includes(1)?'in the middle':'by the weeds'));
       el.appendChild(sub);
+      const md=document.createElement('div'); md.className='medals';
+      md.innerHTML=TIERS.map((T,i)=>'<span class="'+((S.tier[sp]||0)>=i&&have?'won':'')+'" title="'+T.id+'">'+T.ico+'</span>').join('');
+      el.appendChild(md);
       if(f.ma){ const ma=document.createElement('div'); ma.className='ma'; ma.textContent=S.ma[sp]?'★ MASTER ANGLER':'Master: '+f.ma+' cm'; el.appendChild(ma); }
       g.appendChild(el);
     }
@@ -1595,28 +1776,37 @@ function renderLakes(){
     const nm=document.createElement('div'); nm.className='nm'; nm.textContent=l.name; info.appendChild(nm);
     const sub=document.createElement('div'); sub.className='sub'; sub.textContent=l.sub; info.appendChild(sub);
     if(have){
-      const b=document.createElement('button'); b.type='button'; b.className='mini use'; b.textContent=here?'YOU ARE HERE':'GO';
-      if(here) b.disabled=true; else b.addEventListener('click',()=>{ travel(l); });
-      info.appendChild(b);
+      const sp=document.createElement('div'); sp.className='spots';
+      for(const spot of SPOTS){
+        const b=document.createElement('button'); b.type='button'; b.className='spot'+(here&&S.spot===spot.id?' here':'');
+        const can=!spot.needs||S.boats.includes(spot.needs);
+        b.textContent=can?spot.name:spot.name+' (needs '+BOATS.find(x=>x.id===spot.needs).name+')';
+        if(!can||(here&&S.spot===spot.id)) b.disabled=true; else b.addEventListener('click',()=>travel(l,spot.id));
+        sp.appendChild(b);
+      }
+      info.appendChild(sp);
     } else {
       const {ok,chips}=unlockOk(l);
       const ch=document.createElement('div'); ch.className='chips'; ch.style.justifyContent='flex-start';
-      ch.innerHTML=chips.map(([t,k])=>'<span class="chip '+(k?'ok':'no')+'">'+t+'</span>').join('');
+      ch.innerHTML=chips.map(([t,k])=>'<span class="chip-s '+(k?'ok':'no')+'">'+t+'</span>').join('');
       info.appendChild(ch);
       const b=document.createElement('button'); b.type='button'; b.className='mini'; b.style.marginTop='6px'; b.textContent=ok?'UNLOCK':'LOCKED'; b.disabled=!ok;
-      if(ok) b.addEventListener('click',()=>{ S.coins-=l.unlock.coins; S.unlocked.push(l.id); Audio.bigJingle(); persist(); checkBadges(); travel(l); });
+      if(ok) b.addEventListener('click',()=>{ S.coins-=l.unlock.coins; S.unlocked.push(l.id); Audio.bigJingle(); persist(); checkBadges(); travel(l,'shore'); });
       info.appendChild(b);
     }
     el.appendChild(info); list.appendChild(el);
   }
 }
-function travel(l){
-  // Moving lakes pulls the line in; a cast in the water is given up, not counted.
+function travel(l,spotId){
+  // Moving lakes or spots pulls the line in; a cast in the water is given up, not counted.
   if(menuFrom==='wait'||menuFrom==='bite'){ bitePending=null; menuFrom='idle'; }
-  S.lake=l.id; persist(); spawnShadows(); updateHud();
+  const spot=spotById(spotId||'shore');
+  S.lake=l.id; S.spot=spot.id; if(spot.needs) S.flags['spot_'+spot.id]=true;
+  persist(); spawnShadows(); updateHud(); checkBadges();
   closePanel();
-  pop(W/2,H*0.4,l.name.toUpperCase(),'good');
-  setStatus('Welcome to '+l.name+'!');
+  pop(W/2,H*0.4,(spot.id==='shore'?l.name:spot.name).toUpperCase(),'good');
+  setStatus(spot.id==='shore'?'Welcome to '+l.name+'!':spot.id==='weeds'?'Out in the weeds. Pike and bass live here!':'Deep water. The big ones are down there.');
+  if(spot.id!=='shore') Audio.plop();
 }
 function paintLakeThumb(cv,l,have){
   const c=cv.getContext('2d'); const w=cv.width,h=cv.height;
@@ -1651,14 +1841,22 @@ $('readingToggle').addEventListener('change',e=>setReading(e.target.checked));
 let resetArmed=false;
 $('resetBtn').addEventListener('click',()=>{
   if(!resetArmed){ resetArmed=true; $('resetBtn').textContent='REALLY?'; $('resetNote').textContent='Tap again to erase all fish, coins and badges.'; return; }
-  S=DEF(); persist(); day=null; $('settings').hidden=true; state='title'; $('title').hidden=false; updateHud(); $('bestTitle').textContent='';
+  S=DEF(); persist(); day=null; $('settings').hidden=true; state='title'; $('title').hidden=false; updateHud(); $('bestTitle').textContent=''; showFotdTitle();
   resetArmed=false; $('resetBtn').textContent='START OVER'; $('resetNote').textContent='';
 });
 $('keepBtn').addEventListener('click',()=>{ Audio.ensure(); keepFishing(); });
+// Tapping the water behind the card also carries on, once the card has had its moment
+$('catch').addEventListener('click',e=>{ if(e.target===e.currentTarget){ Audio.ensure(); keepFishing(); } });
 $('sayBtn').addEventListener('click',()=>{ Audio.ensure(); speak(sayText); });
 $('newDayBtn').addEventListener('click',()=>{ Audio.ensure(); startNewDay(); });
 $('playBtn').addEventListener('click',()=>{ Audio.ensure(); startGame(); });
 
+function showFotdTitle(){
+  const el=$('fotdTitle'); el.innerHTML='';
+  const sp=fishOfDay(); const fresh=fotdFresh(); persist();
+  const cv=document.createElement('canvas'); cv.width=72; cv.height=36; paintFishOn(cv,sp,FISH[sp].max*0.7,{silhouette:false});
+  el.appendChild(cv); const t=document.createElement('span'); t.textContent='FISH OF THE DAY: '+FISH[sp].name.toUpperCase()+(fresh?' · x3 COINS':' · DONE!'); el.appendChild(t);
+}
 function startGame(){
   if(state!=='title') return;
   $('title').hidden=true;
@@ -1688,7 +1886,7 @@ function update(){
     if(!lure.sunk){ lure.y=lerp(lure.y,ty,dt*1.5); if(Math.abs(lure.y-ty)<1) lure.sunk=true; }
     bobber.dip=lerp(bobber.dip,Math.sin(time*2.2)*1.2,dt*4);
     // Holding reels the lure back in
-    if(pressed){ bobber.x-=70*dt; lure.x=bobber.x; if(bobber.x<=dockX+16){ if(bitePending&&bitePending.shadow){ bitePending.shadow.chasing=false; } bitePending=null; reelInEmpty('Cast again!'); return; } }
+    if(pressed){ bobber.x-=70*dt; lure.x=bobber.x; if(bobber.x<=baseX()+16){ if(bitePending&&bitePending.shadow){ bitePending.shadow.chasing=false; } bitePending=null; reelInEmpty('Cast again!'); return; } }
     if(nibbleAt.length&&waitT>=nibbleAt[0]){ nibbleAt.shift(); bobber.dip=4; Audio.nibble(); splashAt(bobber.x,2,false); }
     if(waitT>=biteAt){
       if(bitePending) startBite();
@@ -1703,7 +1901,7 @@ function update(){
 }
 function frame(ts){
   if(!last) last=ts; dt=Math.min(0.05,(ts-last)/1000); last=ts;
-  update(); drawScene();
+  update(); updateCamera(); drawScene();
   requestAnimationFrame(frame);
 }
 
@@ -1715,6 +1913,7 @@ function frame(ts){
   READING.enabled=!!reading; $('readingToggle').checked=READING.enabled;
   if(canSpeak()){ try{ speechSynthesis.getVoices(); speechSynthesis.addEventListener('voiceschanged',()=>speechSynthesis.getVoices()); }catch(e){} }
   if(S.total>0){ $('bestTitle').textContent=S.total+' FISH · BIGGEST '+Math.round(S.bigcm)+' CM'+(S.bigsp?' '+FISH[S.bigsp].name.toUpperCase():''); }
+  showFotdTitle();
   updateHud(); spawnShadows();
   setAct('PLAY','tap to start');
   requestAnimationFrame(frame);
