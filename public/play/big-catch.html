@@ -168,6 +168,7 @@ canvas#scene{position:absolute;inset:0;width:100%;height:100%;display:block}
 .best:empty{display:none}
 .fotd{display:inline-flex;align-items:center;gap:8px;font-family:var(--display);font-size:clamp(7px,1.7vmin,10px);color:var(--warn);background:var(--glass);border:1px solid var(--glass-edge);border-radius:999px;padding:6px 12px}
 .fotd:empty{display:none}
+.fotd-next{color:var(--warn);font-weight:700;margin:2px 0 0}
 .fotd canvas{width:36px;height:18px;display:block}
 .btn{font-family:var(--display);font-size:clamp(10px,2.4vmin,14px);color:var(--accent-ink);background:var(--accent);border:0;border-radius:12px;
   padding:clamp(10px,2.2vmin,14px) clamp(16px,3.6vmin,24px);min-height:44px;cursor:pointer;box-shadow:0 5px 0 var(--accent-shadow);transition:transform .05s;touch-action:manipulation}
@@ -442,6 +443,7 @@ canvas#scene{position:absolute;inset:0;width:100%;height:100%;display:block}
         <div><span class="n" id="ddCoins">0</span><span class="l">coins</span></div>
       </div>
       <div class="chips" id="ddBadges"></div>
+      <p class="tag fotd-next" id="ddFotd"></p>
       <div class="row">
         <button class="btn" id="newDayBtn" type="button">NEW DAY</button>
         <a class="btn ghost" href="../" data-home>HOME</a>
@@ -963,14 +965,14 @@ const DEF=()=>({
   rod:'stick', reel:'old', lures:['worm'], lure:'worm', extras:[],
   lake:'dock', unlocked:['dock'], badges:[], trips:0, bestDay:0, bestStreak:0, words:0,
   flags:{}, seen:{badges:0,journal:0},
-  spot:'shore', boats:[], tier:{}, fotd:{date:'',done:false}, fotdCount:0, iceFish:0, bait:0, jars:0,
+  spot:'shore', boats:[], tier:{}, fotd:{sp:'',lake:'',trip:-1,done:false}, fotdCount:0, iceFish:0, bait:0, jars:0,
   outfit:'classic', outfits:['classic'], looks:[],
   derby:{bodie:0,dad:0,ties:0,last:''},
 });
 let S=Object.assign(DEF(),load('bbc_save',{}));
 if(!S.flags) S.flags={};
 if(!S.seen) S.seen={badges:0,journal:0};
-if(!S.boats) S.boats=[]; if(!S.spot) S.spot='shore'; if(!S.derby) S.derby={bodie:0,dad:0,ties:0,last:''}; if(!S.outfits) S.outfits=['classic']; if(!S.outfit) S.outfit='classic'; if(!S.looks) S.looks=[]; if(!S.tier) S.tier={}; if(!S.fotd) S.fotd={date:'',done:false}; if(!S.fotdCount) S.fotdCount=0;
+if(!S.boats) S.boats=[]; if(!S.spot) S.spot='shore'; if(!S.derby) S.derby={bodie:0,dad:0,ties:0,last:''}; if(!S.outfits) S.outfits=['classic']; if(!S.outfit) S.outfit='classic'; if(!S.looks) S.looks=[]; if(!S.tier) S.tier={}; if(!S.fotd||!S.fotd.sp) S.fotd={sp:'',lake:'',trip:-1,done:false}; if(!S.fotdCount) S.fotdCount=0;
 // Older saves: give medals for the best fish already in the book
 for(const sp of Object.keys(S.best)) if(S.tier[sp]===undefined) S.tier[sp]=tierOf(sp,S.best[sp]);
 function persist(){
@@ -1072,13 +1074,23 @@ function setReading(on){
 }
 
 // ---------- Fish of the day ----------
-function todayKey(){ const d=new Date(); return d.getFullYear()*10000+(d.getMonth()+1)*100+d.getDate(); }
-function fishOfDay(){
-  const pool=[]; for(const l of LAKES) if(S.unlocked.includes(l.id)) for(const sp of l.fish) if(!pool.includes(sp)) pool.push(sp);
-  const k=todayKey(); let h=k*2654435761%4294967296; h=(h^(h>>>13))>>>0;
-  return pool[h%pool.length];
+// One fish per fishing day (a trip), picked from the lake he is on, never a legend, and never the
+// same one twice in a row. Common fish come up twice as often as the tricky ones. It is rolled
+// for the next trip the moment a trip ends, so the title always has something new to chase, and
+// it re-rolls if he changes lakes before catching it. Derby days sit outside it.
+function fotdTripNo(){ return day&&!day.derby&&!day.over?S.trips:S.trips+1; }   // the trip the fish is for: this one, or the next
+function rollFotd(){
+  const l=lakeById(S.lake), prev=S.fotd&&S.fotd.sp, pool=[];
+  for(const sp of l.fish){ const r=FISH[sp].rarity; if(r>=4||sp===prev) continue; pool.push(sp); if(r<=2) pool.push(sp); }
+  const opts=pool.length?pool:l.fish.filter(sp=>FISH[sp].rarity<4);
+  S.fotd={sp:pick(opts.length?opts:l.fish),lake:S.lake,trip:fotdTripNo(),done:false};
 }
-function fotdFresh(){ const k=String(todayKey()); if(S.fotd.date!==k){ S.fotd={date:k,done:false}; } return !S.fotd.done; }
+function fishOfDay(){
+  const f=S.fotd, trip=fotdTripNo();
+  if(!f||!f.sp||!FISH[f.sp]||f.trip!==trip||(f.lake!==S.lake&&!f.done)) rollFotd();
+  return S.fotd.sp;
+}
+function fotdFresh(){ fishOfDay(); return !S.fotd.done; }
 
 // ---------- Day / trip state ----------
 const CASTS_PER_DAY=15, NIGHT_CASTS=5;
@@ -2184,7 +2196,7 @@ function landFish(){
   const tier=tierOf(sp,len), hadTier=S.tier[sp]===undefined?-1:S.tier[sp];
   if(tier>0&&tier>hadTier){ tags.push([TIERS[tier].ico+' '+TIERS[tier].name,'medal']); coins+=TIERS[tier].coins; }
   S.tier[sp]=Math.max(hadTier,tier);
-  if(sp===fishOfDay()&&fotdFresh()){ S.fotd.done=true; S.fotdCount++; tags.push(['FISH OF THE DAY x3','fotd']); coins*=3; }
+  if(!(day&&day.derby)&&sp===fishOfDay()&&fotdFresh()){ S.fotd.done=true; S.fotdCount++; tags.push(['FISH OF THE DAY x3','fotd']); coins*=3; }
   S.best[sp]=Math.max(S.best[sp]||0,len);
   S.counts[sp]=(S.counts[sp]||0)+1;
   if(isMa) S.ma[sp]=Math.max(S.ma[sp]||0,len);
@@ -2274,6 +2286,9 @@ function endDay(){
   $('ddFish').textContent=day.fish; $('ddBig').textContent=day.fish?Math.round(day.bigcm)+' cm':'none'; $('ddCoins').textContent=day.coins;
   const cv=$('ddArt'); if(day.fish){ cv.hidden=false; paintFishOn(cv,day.bigsp,day.bigcm); } else cv.hidden=true;
   $('ddBadges').innerHTML=day.badges.map(id=>{ const b=BADGES.find(x=>x.id===id); return '<span class="chip-s ok">'+b.ico+' '+b.name+'</span>'; }).join('');
+  // Tomorrow's fish of the day, rolled now so it is waiting on the screen
+  const wasDone=S.fotd.done; day.over=true; const nxt=fishOfDay();
+  $('ddFotd').textContent=(wasDone?'Got it! Tomorrow: ':'Tomorrow: ')+FISH[nxt].name+' is the fish of the day. x3 coins!';
   $('daydone').hidden=false;
   setStatus(''); setAct('DAY DONE','');
   persist();
@@ -2650,6 +2665,9 @@ function travel(l,spotId){
   tipReset();
   // Ice lures stay on the ice: back in open water he is on his best regular lure
   if(!isIce()&&lureById(S.lure).ice){ const reg=LURES.filter(x=>!x.ice&&S.lures.includes(x.id)); S.lure=(reg[reg.length-1]||LURES[0]).id; }
+  // A new lake gets its own fish of the day if this one has not been caught yet
+  const wasFotd=S.fotd.sp, nowFotd=fishOfDay();
+  if(nowFotd!==wasFotd&&!S.fotd.done&&day) setTimeout(()=>{ if(state==='idle') setStatus('Fish of the day here: '+FISH[nowFotd].name+'! Triple coins!'); },2600);
   persist(); spawnShadows(); updateHud(); checkBadges();
   closePanel();
   pop(W/2,H*0.4,(spot.id==='shore'?l.name:spot.name).toUpperCase(),'good');
