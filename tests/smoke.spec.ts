@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-const ROUTES = ["/", "/arcade/", "/reading/", "/dad/", "/offline/", "/play/purple-turtles.html", "/play/bodies-books.html", "/play/big-catch.html"];
+const ROUTES = ["/", "/arcade/", "/reading/", "/dad/", "/offline/", "/play/purple-turtles.html", "/play/bodies-books.html", "/play/big-catch.html", "/play/canoe-rapids.html"];
 
 for (const route of ROUTES) {
   test(`boots ${route} with no console errors and no sideways scroll`, async ({ page }) => {
@@ -52,9 +52,30 @@ test("arcade cabinets carry no build jargon", async ({ page }) => {
   await page.goto("/arcade/", { waitUntil: "networkidle" });
   await expect(page.locator(".cabinet")).toHaveCount(4);
   await expect(page.getByText(/Phase \d/)).toHaveCount(0);
-  // "COMING SOON" sits on its own line under the title.
-  const soon = page.locator(".cabinet .screen.soon").first();
-  await expect(soon).toHaveCSS("white-space", "pre-line");
+  await expect(page.locator(".cabinet .screen.soon")).toHaveCount(0);
+});
+
+test("canoe rapids runs a river from start to the finish card, plain and in word mode", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  for (const hash of ["", "#reading"]) {
+    await page.goto(`/play/canoe-rapids.html${hash}`, { waitUntil: "networkidle" });
+    await page.reload({ waitUntil: "networkidle" }); // the hash alone does not reload the page
+    await expect(page.locator("#playBtn")).toBeVisible();
+    await page.locator("#playBtn").click();
+    await expect(page.locator("#riverStrip .card")).toHaveCount(8);
+    await page.locator("#riverStrip .card").first().click();
+    await expect(page.locator("#hud")).toBeVisible();
+    const st = await page.evaluate(() => (window as unknown as { __canoe: { state(): { reading: boolean; gates: number } } }).__canoe.state());
+    expect(st.reading).toBe(hash === "#reading");
+    expect(st.gates).toBe(hash ? 7 : 0);
+    await page.waitForTimeout(2200);
+    await page.evaluate(() => (window as unknown as { __canoe: { finishNow(): void } }).__canoe.finishNow());
+    await expect(page.locator("#done")).toBeVisible({ timeout: 8000 });
+    await expect(page.locator("#doneStars")).toContainText("\u2605");
+    expect(await page.locator("#done").innerText()).not.toContain("\u2014");
+  }
+  expect(errors, "page errors").toEqual([]);
 });
 
 test("purple turtles reaches its title screen", async ({ page }) => {

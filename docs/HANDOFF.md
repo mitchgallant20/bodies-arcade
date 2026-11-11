@@ -362,10 +362,19 @@ Replaces the earlier "Fishing for Words" sketch. A progression fishing game firs
 - **Sound (2026-11-10).** All synthesized in WebAudio, no files. An ambient layer under the effects: water lap (bandpassed noise with a slow swell), wind, rain or snow hiss, ice groan, with loons on the wild lakes every 25 to 60 s, crickets at dusk and night, frogs at the Dock and in the Weeds after dusk, gulls on Lake Winnipeg by day, and ice creaks in winter. The line sings while a fish runs (a filtered sawtooth with vibrato that opens with tension). Three catch jingles: common, big, and a legend fanfare for Master Anglers and rarity-5 fish. A looping chip tune on the title screen. A second toggle in the pause sheet, "Lake sounds and music", separate from the effects; both persist. Everything ducks when the page is hidden.
 - **Controls.** The round reel button (bottom-right) and the water itself; SPACE on a keyboard. Four menu chips bottom-left: SHOP, FISH, BADGES, LAKES, with a red dot when something new is waiting. The catch card covers the button; KEEP FISHING, a tap on the water behind the card, or SPACE carries on after the hold.
 
-### New cabinet: Canoe Rapids (Phase 3)
+### New cabinet: Canoe Rapids (Phase 3, shipped 2026-11-10)
 
-- Top-down river scroller. Gates of two or three buoys ahead, each with a word; steer (tilt or two paddles) through the buoy that matches the spoken word. Missing a gate bumps a rock and spins the canoe (lose time, not a life). Deer, beaver and a fishing Dad on the banks as scenery. Three rapids per run.
-- Modality: `hear-pick`, with `read-pick` mode showing the target on a sign at the bow.
+Source: `games/canoe/canoe-rapids.html`, a single-file fragment like Big Catch, wrapped to `public/play/canoe-rapids.html` by `scripts/adapt-legacy.mjs`.
+
+- **The game.** Top-down river on one full-screen canvas. The river runs up the screen in portrait and left to right in landscape, so there is always a long look ahead. Slide a finger and the canoe paddles to it (arrow keys on a keyboard). Coins mark the safe line through the rocks. Every run is calm water, then three rapids that get longer, then the finish line where Dad cheers from his dock.
+- **In the water.** Rocks (bump: spin, lose speed, lose the coin streak, never a life), drifting logs, whirlpools that pull, ZOOM pads that boost, lily pads. Skim a rock without touching it for a CLOSE! bonus. There is no way to lose a run; every run ends on the finish card.
+- **Eight rivers, in order.** Sturgeon Creek, Assiniboine, Red River, Whiteshell, Winnipeg River, Bloodvein, Hayes River, Seal River. Each is faster, tighter and longer than the last (132 to 218 units a second, about 65 to 75 seconds a run) and has its own look: morning, day, sunset, fall colours, big water, night with fireflies and a lantern, rain, snow and ice. Logs arrive on river 2, whirlpools on river 4. Layouts are fixed per river so he can learn them. Finishing a river unlocks the next.
+- **Stars and canoes.** 1 star for finishing, 2 for 55% of the coins, 3 for 85%. Coins bank across runs and unlock canoes (Red, Blue 150, Green 400, Sun 800, Bolt 1400, Gold 2400).
+- **Word mode.** Seven gates a run, one in every stretch: a rope of floats with two words (first two gates) or three, each on a sign. The word is spoken as the gate comes into view and again closer in; the chip at the top repeats it on a tap. The river slows a little before each gate. Right lane: chime, +50, a short boost. Wrong lane: the right sign lights up, the word is spoken again, a soft spin, and the word comes back at a later gate. A miss never costs a point, a coin or a star. Modality is `hear-pick`; with sound off, no voice, or on a retry, the chip shows the word (`read-pick`). Words come from the app lists (first list not 90% known, plus review words), the first gate is a word he knows, and confusable pairs appear from the third gate on.
+- **Scenery.** Deer, a beaver by its lodge, tents with campfires, a cabin, and Dad fishing from a dock halfway down ("Go Bodie!").
+- **Sound.** All WebAudio: river noise that swells in the rapids, paddle strokes, a coin chime that climbs with the streak, bump, boost, gate chime, finish jingle.
+- **Storage.** `bcr_prog` (stars and best score per river), `bcr_stars`, `bcr_best`, `bcr_coins`, `bcr_canoe`, `bcr_sound`, `bcr_reading`, `bcr_words` (same shape as `bbc_words`). Dad's Corner does not read `bcr_words` yet.
+- **Not built yet:** tilt steering, and the Dad's Corner view of the canoe words.
 
 ### Cabinet rules
 
@@ -514,6 +523,12 @@ Order and gating follow this sequence. Keep the exact words; they match the star
 ## Build log
 
 Newest first. One entry per phase or notable decision. Keep it short.
+
+### 2026-11-10: Canoe Rapids
+
+- The last "coming soon" cabinet is live: `games/canoe/canoe-rapids.html`, eight rivers, free play and word mode (Section 13, "New cabinet: Canoe Rapids"). Registry entry is `ready` with PLAY and WORD MODE; the cabinet shows best score and stars out of 24.
+- `scripts/adapt-legacy.mjs` wraps it and inlines the word lists the same way as Big Catch. Service worker cache bumped to `arcade-v4` with the new play page precached.
+- Smoke test boots the page at all three sizes and runs a river to the finish card in both modes. The "coming soon" marquee check is now a check that no cabinet is left waiting.
 
 ### 2026-11-07: Big Catch, the fishing cabinet
 

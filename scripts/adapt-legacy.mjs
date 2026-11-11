@@ -198,3 +198,8 @@ const WL = wordLists();
 wrap("big-catch.html", "#150f30", (body) => body
   .replace("/*__WORD_LISTS__*/[]", JSON.stringify(WL.lists))
   .replace("/*__CONFUSABLES__*/[]", JSON.stringify(WL.groups)), "", join(root, "games", "fishing"));
+
+// Canoe Rapids: same kind of fragment, same word lists.
+wrap("canoe-rapids.html", "#150f30", (body) => body
+  .replace("/*__WORD_LISTS__*/[]", JSON.stringify(WL.lists))
+  .replace("/*__CONFUSABLES__*/[]", JSON.stringify(WL.groups)), "", join(root, "games", "canoe"));

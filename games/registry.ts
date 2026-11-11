@@ -59,10 +59,14 @@ export const CABINETS: Cabinet[] = [
   {
     id: "canoe",
     title: "CANOE RAPIDS",
-    blurb: "Steer through the buoy that matches.",
+    blurb: "Paddle fast. Miss the rocks. Get the coins!",
     orientation: "landscape-preferred",
     supportsReadingMode: true,
-    status: "soon",
+    status: "ready",
+    href: "/play/canoe-rapids.html",
+    readingHref: "/play/canoe-rapids.html#reading",
+    bestKey: "bcr_best",
+    stats: [{ label: "Stars", key: "bcr_stars", suffix: "/24" }],
     phase: "Phase 3",
   },
 ];
